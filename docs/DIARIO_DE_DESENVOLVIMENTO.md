@@ -1,7 +1,6 @@
 # Diário de Desenvolvimento e Próximos Passos
 
 Este documento serve como um log do progresso do projeto, organizado por fases.
-
 ---
 
 ### **Fase 1: Estrutura Inicial do Projeto (Concluída)**
@@ -23,7 +22,6 @@ Este documento serve como um log do progresso do projeto, organizado por fases.
     -   Integração com o FFmpeg (via `vendor`) para conversão de áudio está funcional.
     -   Lógica de transcrição com Vosk implementada.
     -   Criação da estrutura de pastas espelhada no destino foi validada.
-    -   Corrigidos bugs de exclusão de arquivos temporários e nomenclatura.
 
 ---
 
@@ -34,17 +32,18 @@ Este documento serve como um log do progresso do projeto, organizado por fases.
     -   Arquivos CSS e JavaScript foram separados do HTML.
     -   O botão "INICIAR TRANSCRIÇÃO" agora envia uma requisição `fetch` para o back-end.
     -   A rota `/start-processing` recebe a requisição e inicia o processo em uma thread separada, mantendo a interface responsiva.
-    -   A comunicação inicial foi depurada e validada.
 
 ---
 
-### **Fase 4: Feedback em Tempo Real (A Fazer)**
+### **Fase 4: Feedback em Tempo Real (Concluída)**
 
 -   **Objetivo:** Exibir o progresso da transcrição na interface em tempo real.
--   **Próximos Passos:**
-    -   Implementar a lógica de "polling" no `main.js` usando `setInterval` para chamar a rota `/get-progress`.
-    -   Usar os dados recebidos para atualizar dinamicamente as barras de progresso e os textos de status na página.
-    -   Implementar a lógica para mover visualmente um item da lista "A Processar" para a lista "Processados" após sua conclusão.
+-   **Realizações:**
+    -   Implementada a rota `/get-progress` para fornecer o status detalhado do trabalho (progresso geral, arquivo atual e progresso individual).
+    -   Front-end utiliza `setInterval` para fazer polling contínuo ao back-end.
+    -   Barras de progresso (geral e individual) e textos de status são atualizados dinamicamente.
+    -   **Resolvida uma condição de corrida de manipulação do DOM**, implementando uma fila de espera no JavaScript para mover os itens de forma estável e incremental da lista "Para Processar" para "Processados".
+    -   O polling é interrompido (`clearInterval`) corretamente ao final do processo.
 
 ---
 
@@ -53,6 +52,6 @@ Este documento serve como um log do progresso do projeto, organizado por fases.
 -   **Objetivo:** Implementar os controles de gerenciamento e conveniência restantes.
 -   **Próximos Passos:**
     -   Fazer o botão `+ Adicionar Arquivo` funcionar.
-    * Fazer os botões `Limpar Fila` e `Limpar Concluídos` funcionarem.
+    -   Fazer os botões `Limpar Fila` e `Limpar Concluídos` funcionarem.
     -   Implementar a funcionalidade do botão `PARAR PROCESSO`.
-    -   Implementar as ações do menu de contexto, especialmente "Abrir Local do Arquivo".
+    -   Implementar as ações do menu de contexto, como "Remover da Fila" ou "Abrir Local".

@@ -66,30 +66,30 @@ class TranscriptionManager:
 
     # --- MÉTODO ATUALIZADO ---
     def _transcribe_single_file(self, file_path):
-        """Lógica para transcrever um único arquivo com correções."""
-        self.current_file_info["filename"] = os.path.basename(file_path)
-        self.current_file_info["progress"] = 0
+        """Lógica para transcrever um único arquivo com cálculo de progresso."""
+        base_name = os.path.basename(file_path)
+        self.current_file_info["filename"] = base_name
         
-        print(f"\n--- Processando: {file_path} ---")
+        print(f"\n--- Processando: {base_name} ---")
         
         relative_path = os.path.relpath(file_path, self.source_path)
         output_txt_path_obj = Path(self.dest_path) / Path(relative_path).with_suffix('.txt')
         output_txt_path_obj.parent.mkdir(parents=True, exist_ok=True)
         
-        # Correção 2: Usa .stem para pegar o nome sem a extensão
         file_stem = Path(file_path).stem
         temp_wav_file = Path(self.dest_path) / f"temp_{file_stem}.wav"
 
         print("    -> Convertendo para WAV...")
         if not convert_to_wav(file_path, str(temp_wav_file)):
+            self.current_file_info["progress"] = "Erro na conversão"
             return
 
         print("    -> Transcrevendo áudio...")
         transcript_text = None
         
-        # Correção 1: Usa o 'with' para garantir que o arquivo seja fechado
         try:
             with wave.open(str(temp_wav_file), "rb") as wf:
+                total_frames = wf.getnframes()
                 recognizer = vosk.KaldiRecognizer(self.model, wf.getframerate())
                 
                 full_transcript = []
@@ -97,28 +97,37 @@ class TranscriptionManager:
                     data = wf.readframes(4000)
                     if len(data) == 0:
                         break
+                    
+                    # Atualiza o progresso do arquivo atual
+                    frames_read = wf.tell()
+                    self.current_file_info["progress"] = int((frames_read / total_frames) * 100)
+                    
                     recognizer.AcceptWaveform(data)
                 
                 final_result = json.loads(recognizer.FinalResult())
                 full_transcript.append(final_result['text'])
                 transcript_text = ' '.join(full_transcript).strip()
+                self.current_file_info["progress"] = 100 # Marca como 100% ao finalizar
         except Exception as e:
             print(f"[ERRO] Falha ao ler ou transcrever o arquivo WAV: {e}")
-        
-        # Salva o texto se a transcrição foi bem-sucedida
+            self.current_file_info["progress"] = "Erro na transcrição"
+
         if transcript_text is not None:
             with open(output_txt_path_obj, 'w', encoding='utf-8') as f:
                 f.write(transcript_text)
             print(f"    -> Salvo em: {output_txt_path_obj}")
 
-        # O 'with' já fechou o arquivo, agora a remoção é mais segura
         try:
             os.remove(temp_wav_file)
             print(f"    -> Arquivo temporário removido.")
         except OSError as e:
             print(f"[ERRO] Não foi possível remover o arquivo temporário {temp_wav_file}: {e}")
 
-    def run(self):
+    def get_file_list(self):
+        """Retorna a lista de arquivos a serem processados."""
+        return self.files_to_process
+
+    def run_transcription(self):
         """Ponto de entrada para iniciar o processo de transcrição em lote."""
         if not self.model:
             self.status = "error"
@@ -152,12 +161,13 @@ class TranscriptionManager:
         print("="*50)
 
     def get_status(self):
+        # A API agora retorna o objeto completo com nome e progresso individual
         return {
             "status": self.status,
             "progress_general": self.progress_general,
             "total_files": self.total_files,
             "files_processed": self.files_processed_count,
-            "current_file": self.current_file_info["filename"]
+            "current_file": self.current_file_info
         }
 
 def load_vosk_model():

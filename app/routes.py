@@ -26,17 +26,21 @@ def start_processing():
     if not VOSK_MODEL:
         return jsonify({'status': 'erro', 'message': 'Modelo Vosk não carregado.'}), 500
 
-    print(f"[*] Rota /start-processing acionada.")
-    
+    # Cria a instância e ESCANEIA os arquivos imediatamente
     transcription_job = TranscriptionManager(source_path, dest_path, VOSK_MODEL)
-    
-    process_thread = threading.Thread(target=transcription_job.run)
+    transcription_job.scan_files() # Escaneia os arquivos antes de iniciar a thread
+    initial_file_list = transcription_job.get_file_list()
+
+    # Inicia o processamento pesado em segundo plano
+    process_thread = threading.Thread(target=transcription_job.run_transcription) # Renomeado
     process_thread.start()
 
-    response_data = {'status': 'sucesso', 'message': 'Processo iniciado em segundo plano.'}
-    print(f"[*] Enviando resposta para o navegador: {response_data}") # PRINT DE DEPURAÇÃO
-    
-    return jsonify(response_data)
+    # Retorna sucesso E a lista inicial de arquivos para o front-end
+    return jsonify({
+        'status': 'sucesso',
+        'message': 'Processo iniciado.',
+        'files': initial_file_list
+    })
 
 # Rota para a Fase 4
 @app.route('/get-progress')
