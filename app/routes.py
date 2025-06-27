@@ -18,28 +18,21 @@ def index():
 def start_processing():
     global transcription_job
     data = request.get_json()
-    source_path = data.get('source_path')
+    file_list = data.get('file_list')
     dest_path = data.get('dest_path')
 
-    if not source_path or not dest_path:
-        return jsonify({'status': 'erro', 'message': 'Caminhos não fornecidos.'}), 400
+    if not file_list or not dest_path:
+        return jsonify({'status': 'erro', 'message': 'Lista de arquivos ou caminho de destino não fornecidos.'}), 400
     if not VOSK_MODEL:
         return jsonify({'status': 'erro', 'message': 'Modelo Vosk não carregado.'}), 500
 
-    # Cria a instância e ESCANEIA os arquivos imediatamente
-    transcription_job = TranscriptionManager(source_path, dest_path, VOSK_MODEL)
-    transcription_job.scan_files() # Escaneia os arquivos antes de iniciar a thread
-    initial_file_list = transcription_job.get_file_list()
-
-    # Inicia o processamento pesado em segundo plano
-    process_thread = threading.Thread(target=transcription_job.run_transcription) # Renomeado
+    transcription_job = TranscriptionManager(dest_path, VOSK_MODEL, file_list)
+    process_thread = threading.Thread(target=transcription_job.run_transcription)
     process_thread.start()
 
-    # Retorna sucesso E a lista inicial de arquivos para o front-end
     return jsonify({
         'status': 'sucesso',
-        'message': 'Processo iniciado.',
-        'files': initial_file_list
+        'message': 'Processo iniciado.'
     })
 
 # Rota para a Fase 4

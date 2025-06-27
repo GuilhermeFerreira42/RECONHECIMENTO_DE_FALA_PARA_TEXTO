@@ -39,129 +39,90 @@ def convert_to_wav(media_path, temp_wav_path):
 # --- CLASSE GERENCIADORA ---
 
 class TranscriptionManager:
-    def __init__(self, source_path, dest_path, model):
-        self.source_path = source_path
+    def __init__(self, dest_path, model, file_list):
         self.dest_path = dest_path
         self.model = model
-        self.files_to_process = []
-        self.total_files = 0
+        self.files_to_process = file_list
+        self.total_files = len(file_list)
         self.files_processed_count = 0
         self.status = "idle"
         self.progress_general = 0
-        self.current_file_info = {"filename": "", "progress": 0}
+        self.current_file_info = {"filename": "", "progress": 0, "full_path": ""}
 
-    def scan_files(self):
-        self.status = "scanning"
-        print(f"[*] Iniciando varredura em: {self.source_path}")
-        scanned_files = []
-        for root, _, files in os.walk(self.source_path):
-            for file in files:
-                if file.lower().endswith(SUPPORTED_EXTENSIONS):
-                    full_path = os.path.join(root, file)
-                    scanned_files.append(full_path)
-        
-        self.files_to_process = scanned_files
-        self.total_files = len(scanned_files)
-        print(f"[*] Varredura concluída. {self.total_files} arquivos encontrados.")
-
-    # --- MÉTODO ATUALIZADO ---
     def _transcribe_single_file(self, file_path):
-        """Lógica para transcrever um único arquivo com cálculo de progresso."""
         base_name = os.path.basename(file_path)
-        self.current_file_info["filename"] = base_name
-        
+        self.current_file_info = {
+            "filename": base_name,
+            "progress": 0,
+            "full_path": file_path
+        }
         print(f"\n--- Processando: {base_name} ---")
-        
-        relative_path = os.path.relpath(file_path, self.source_path)
-        output_txt_path_obj = Path(self.dest_path) / Path(relative_path).with_suffix('.txt')
+        output_txt_path_obj = Path(self.dest_path) / Path(base_name).with_suffix('.txt')
         output_txt_path_obj.parent.mkdir(parents=True, exist_ok=True)
-        
         file_stem = Path(file_path).stem
         temp_wav_file = Path(self.dest_path) / f"temp_{file_stem}.wav"
-
         print("    -> Convertendo para WAV...")
         if not convert_to_wav(file_path, str(temp_wav_file)):
             self.current_file_info["progress"] = "Erro na conversão"
             return
-
         print("    -> Transcrevendo áudio...")
         transcript_text = None
-        
         try:
             with wave.open(str(temp_wav_file), "rb") as wf:
                 total_frames = wf.getnframes()
                 recognizer = vosk.KaldiRecognizer(self.model, wf.getframerate())
-                
                 full_transcript = []
                 while True:
                     data = wf.readframes(4000)
                     if len(data) == 0:
                         break
-                    
-                    # Atualiza o progresso do arquivo atual
                     frames_read = wf.tell()
                     self.current_file_info["progress"] = int((frames_read / total_frames) * 100)
-                    
                     recognizer.AcceptWaveform(data)
-                
                 final_result = json.loads(recognizer.FinalResult())
                 full_transcript.append(final_result['text'])
                 transcript_text = ' '.join(full_transcript).strip()
-                self.current_file_info["progress"] = 100 # Marca como 100% ao finalizar
+                self.current_file_info["progress"] = 100
         except Exception as e:
             print(f"[ERRO] Falha ao ler ou transcrever o arquivo WAV: {e}")
             self.current_file_info["progress"] = "Erro na transcrição"
-
         if transcript_text is not None:
             with open(output_txt_path_obj, 'w', encoding='utf-8') as f:
                 f.write(transcript_text)
             print(f"    -> Salvo em: {output_txt_path_obj}")
-
         try:
             os.remove(temp_wav_file)
             print(f"    -> Arquivo temporário removido.")
         except OSError as e:
             print(f"[ERRO] Não foi possível remover o arquivo temporário {temp_wav_file}: {e}")
 
-    def get_file_list(self):
-        """Retorna a lista de arquivos a serem processados."""
-        return self.files_to_process
-
     def run_transcription(self):
-        """Ponto de entrada para iniciar o processo de transcrição em lote."""
         if not self.model:
             self.status = "error"
             print("[ERRO] Modelo Vosk não está carregado.")
             return
-
-        self.scan_files()
-        
         if not self.files_to_process:
             self.status = "completed"
-            print("[AVISO] Nenhum arquivo de mídia encontrado.")
+            print("[AVISO] Nenhuma arquivo de mídia para processar.")
             return
-
         self.status = "running"
         self.files_processed_count = 0
-        
         for file_path in self.files_to_process:
             try:
                 self._transcribe_single_file(file_path)
             except Exception as e:
                 print(f"[ERRO GERAL] Falha ao processar {file_path}: {e}")
-            
             self.files_processed_count += 1
-            self.progress_general = int((self.files_processed_count / self.total_files) * 100)
+            if self.total_files > 0:
+                self.progress_general = int((self.files_processed_count / self.total_files) * 100)
             print(f"Progresso Geral: {self.progress_general}%")
-
         self.status = "completed"
-        self.current_file_info = {"filename": "Processo finalizado!", "progress": 100}
+        self.current_file_info = {"filename": "Processo finalizado!", "progress": 100, "full_path": ""}
         print("\n" + "="*50)
         print("PROCESSO DE TRANSCRIÇÃO CONCLUÍDO")
         print("="*50)
 
     def get_status(self):
-        # A API agora retorna o objeto completo com nome e progresso individual
         return {
             "status": self.status,
             "progress_general": self.progress_general,

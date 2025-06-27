@@ -14,12 +14,18 @@
   <header class="flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
     <div class="flex items-center gap-4">
         <div>
-            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase mb-1">ORIGEM</label>
-            <input id="origem" type="text" class="w-full px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-md" placeholder="/caminho/de/origem" readonly>
+            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase mb-1">PASTA DE ORIGEM (OPCIONAL)</label>
+            <div class="flex items-center">
+                <input id="origem" type="text" class="w-80 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione uma pasta para carregar em lote..." readonly>
+                <button id="select-origem-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
+            </div>
         </div>
         <div>
-            <label for="destino" class="text-xs font-semibold text-gray-500 uppercase mb-1">DESTINO</label>
-            <input id="destino" type="text" class="w-full px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-md" placeholder="/caminho/de/destino" readonly>
+            <label for="destino" class="text-xs font-semibold text-gray-500 uppercase mb-1">PASTA DE DESTINO</label>
+            <div class="flex items-center">
+                <input id="destino" type="text" class="w-80 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione onde salvar as transcrições..." readonly>
+                <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
+            </div>
         </div>
     </div>
     <div class="flex gap-3 ml-4">

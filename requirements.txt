@@ -1,0 +1,4 @@
+Flask>=2.0
+vosk>=0.3.45
+pywebview>=4.0 
+# Adicionamos pywebview para criar a janela de desktop híbrida
