@@ -21,12 +21,28 @@ def start_processing():
     file_list = data.get('file_list')
     dest_path = data.get('dest_path')
 
+    # [MODIFICADO] Recebendo os novos parâmetros
+    keep_structure = data.get('keep_structure', False) # Default para False se não for enviado
+    source_path = data.get('source_path', None)
+
     if not file_list or not dest_path:
         return jsonify({'status': 'erro', 'message': 'Lista de arquivos ou caminho de destino não fornecidos.'}), 400
+    
+    # [NOVO] Validação no back-end
+    if keep_structure and not source_path:
+        return jsonify({'status': 'erro', 'message': 'Pasta de origem não fornecida para manter a estrutura.'}), 400
+        
     if not VOSK_MODEL:
         return jsonify({'status': 'erro', 'message': 'Modelo Vosk não carregado.'}), 500
 
-    transcription_job = TranscriptionManager(dest_path, VOSK_MODEL, file_list)
+    # [MODIFICADO] Passando os novos parâmetros para o TranscriptionManager
+    transcription_job = TranscriptionManager(
+        dest_path=dest_path, 
+        model=VOSK_MODEL, 
+        file_list=file_list,
+        keep_structure=keep_structure,
+        source_path=source_path
+    )
     process_thread = threading.Thread(target=transcription_job.run_transcription)
     process_thread.start()
 

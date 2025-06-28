@@ -221,12 +221,27 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
+            const keepStructure = document.getElementById('keep-structure-checkbox').checked;
+            const sourcePath = origemInput.value;
+
+            if (keepStructure && !sourcePath) {
+                alert('Para manter a estrutura de pastas, você deve primeiro selecionar uma Pasta de Origem.');
+                return;
+            }
+
             const fileList = Array.from(fileItems).map(item => item.dataset.filepath);
+
+            const requestBody = {
+                file_list: fileList,
+                dest_path: destPath,
+                keep_structure: keepStructure,
+                source_path: sourcePath 
+            };
 
             fetch('/start-processing', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ file_list: fileList, dest_path: destPath }),
+                body: JSON.stringify(requestBody),
             })
             .then(response => response.json())
             .then(data => {

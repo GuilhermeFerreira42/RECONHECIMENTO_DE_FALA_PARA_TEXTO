@@ -40,8 +40,8 @@ def convert_to_wav(media_path, temp_wav_path):
 # --- CLASSE GERENCIADORA ---
 
 class TranscriptionManager:
-    def __init__(self, dest_path, model, file_list):
-        self.dest_path = dest_path
+    def __init__(self, dest_path, model, file_list, keep_structure=False, source_path=None):
+        self.dest_path = Path(dest_path)
         self.model = model
         self.files_to_process = file_list
         self.total_files = len(file_list)
@@ -50,26 +50,37 @@ class TranscriptionManager:
         self.progress_general = 0
         self.current_file_info = {"filename": "", "progress": 0, "full_path": ""}
         self.stop_requested = False
+        self.keep_structure = keep_structure
+        self.source_path = Path(source_path) if source_path else None
 
     def request_stop(self):
         print("[AVISO] Solicitação de parada recebida.")
         self.stop_requested = True
 
-    def _transcribe_single_file(self, file_path):
-        base_name = os.path.basename(file_path)
+    def _transcribe_single_file(self, file_path_str):
+        file_path = Path(file_path_str)
+        base_name = file_path.name
+        
         self.current_file_info = {
             "filename": base_name,
             "progress": 0,
-            "full_path": file_path
+            "full_path": file_path_str
         }
         print(f"\n--- Processando: {base_name} ---")
-        output_txt_path_obj = Path(self.dest_path) / Path(base_name).with_suffix('.txt')
+
+        output_txt_path_obj = None
+        if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
+            relative_path = file_path.relative_to(self.source_path)
+            output_txt_path_obj = self.dest_path / relative_path.with_suffix('.txt')
+        else:
+            output_txt_path_obj = self.dest_path / file_path.with_suffix('.txt').name
+
         output_txt_path_obj.parent.mkdir(parents=True, exist_ok=True)
-        file_stem = Path(file_path).stem
-        temp_wav_file = Path(self.dest_path) / f"temp_{file_stem}.wav"
+      
+        temp_wav_file = self.dest_path / f"temp_{file_path.stem}.wav"
         
         print("    -> Convertendo para WAV...")
-        if not convert_to_wav(file_path, temp_wav_file):
+        if not convert_to_wav(str(file_path), str(temp_wav_file)):
             self.current_file_info["progress"] = "Erro na conversão"
             return
 
@@ -78,11 +89,10 @@ class TranscriptionManager:
         try:
             with wave.open(str(temp_wav_file), "rb") as wf:
                 total_frames = wf.getnframes()
-                # Se o arquivo WAV estiver vazio, não há o que transcrever
                 if total_frames == 0:
                     print("[AVISO] Arquivo WAV está vazio ou corrompido. Pulando.")
                     self.current_file_info["progress"] = 100
-                    return # Retorna aqui para evitar processamento desnecessário
+                    return
 
                 recognizer = vosk.KaldiRecognizer(self.model, wf.getframerate())
                 full_transcript = []
@@ -101,7 +111,6 @@ class TranscriptionManager:
 
                 if not self.stop_requested:
                     final_result = json.loads(recognizer.FinalResult())
-                    # Acessa o texto e remove espaços em branco extras
                     full_transcript.append(final_result.get('text', ''))
                     transcript_text = ' '.join(full_transcript).strip()
                     self.current_file_info["progress"] = 100
@@ -110,9 +119,6 @@ class TranscriptionManager:
             print(f"[ERRO] Falha ao ler ou transcrever o arquivo WAV: {e}")
             self.current_file_info["progress"] = "Erro na transcrição"
         
-        # *** A CORREÇÃO PRINCIPAL ESTÁ AQUI ***
-        # Em vez de 'if transcript_text is not None', usamos 'if transcript_text:'
-        # Isso garante que a string não seja apenas 'não nula', mas também 'não vazia'.
         if transcript_text and not self.stop_requested:
             with open(output_txt_path_obj, 'w', encoding='utf-8') as f:
                 f.write(transcript_text)
@@ -126,8 +132,6 @@ class TranscriptionManager:
         except OSError as e:
             print(f"[ERRO] Não foi possível remover o arquivo temporário {temp_wav_file}: {e}")
 
-    # O resto do arquivo (run_transcription, get_status, load_vosk_model) permanece o mesmo
-    # da sugestão anterior. O erro estava confinado em _transcribe_single_file.
     def run_transcription(self):
         if not self.model:
             self.status = "error"
