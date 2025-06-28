@@ -35,6 +35,15 @@ def start_processing():
         'message': 'Processo iniciado.'
     })
 
+@app.route('/stop-processing', methods=['POST'])
+def stop_processing():
+    """[NOVA ROTA] Endpoint para parar o processo."""
+    global transcription_job
+    if transcription_job and transcription_job.status == "running":
+        transcription_job.request_stop()
+        return jsonify({'status': 'sucesso', 'message': 'Sinal de parada enviado.'})
+    return jsonify({'status': 'erro', 'message': 'Nenhum processo em andamento para parar.'}), 400
+
 # Rota para a Fase 4
 @app.route('/get-progress')
 def get_progress():

@@ -43,24 +43,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         // --- Funções de UI ---
 
         function addFileToQueue(filePath) {
-            const fileName = filePath.split('\\').pop().split('/').pop();
+            const normalizedPath = filePath.replace(/\\/g, '/');
+            const fileName = normalizedPath.split('/').pop();
             
-            // Evita adicionar arquivos duplicados
-            if (document.querySelector(`#queue-list li[data-filepath="${filePath}"]`)) {
-                console.warn(`Arquivo já na fila: ${filePath}`);
+            if (document.querySelector(`#queue-list li[data-filepath="${normalizedPath}"]`)) {
+                console.warn(`Arquivo já na fila: ${normalizedPath}`);
                 return;
             }
 
             const li = document.createElement('li');
             li.className = 'flex flex-col px-5 py-3 border-b border-gray-100';
-            li.setAttribute('data-filepath', filePath); // Usa o caminho completo como ID único
+            li.setAttribute('data-filepath', normalizedPath);
             li.setAttribute('data-filename', fileName);
 
             li.innerHTML = `
                 <div class="flex items-center gap-3">
                     <i class="fas fa-video text-gray-500 text-xl"></i>
                     <div class="flex-1 min-w-0">
-                        <p class="text-gray-900 font-medium truncate" title="${filePath}">${fileName}</p>
+                        <p class="text-gray-900 font-medium truncate" title="${normalizedPath}">${fileName}</p>
                         <p class="text-gray-500 text-sm status-text">Aguardando na fila...</p>
                     </div>
                 </div>
@@ -72,7 +72,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         function moveItemToCompleted(filePath) {
-            const itemToMove = document.querySelector(`#queue-list li[data-filepath="${filePath}"]`);
+            const normalizedPath = filePath.replace(/\\/g, '/');
+            const itemToMove = document.querySelector(`#queue-list li[data-filepath="${normalizedPath}"]`);
+            
             if (itemToMove) {
                 const fileName = itemToMove.dataset.filename;
                 itemToMove.remove();
@@ -80,13 +82,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const completedFilename = fileName.replace(/\.[^/.]+$/, ".txt");
                 const li = document.createElement('li');
                 li.className = 'flex items-center gap-3 px-5 py-3';
-                li.setAttribute('data-filepath', `${destinoInput.value}/${completedFilename}`); // Caminho do arquivo de saída
+                const destinationPath = (destinoInput.value.replace(/\\/g, '/') + '/' + completedFilename);
+                li.setAttribute('data-filepath', destinationPath);
                 li.setAttribute('data-filename', completedFilename);
 
                 li.innerHTML = `
                     <i class="fas fa-file-alt text-green-600 text-xl"></i>
                     <div class="flex-1 min-w-0">
-                        <p class="text-gray-900 font-medium truncate" title="${li.dataset.filepath}">${completedFilename}</p>
+                        <p class="text-gray-900 font-medium truncate" title="${destinationPath}">${completedFilename}</p>
                         <p class="text-gray-500 text-xs">Concluído com sucesso</p>
                     </div>
                 `;
@@ -106,14 +109,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const currentFileName = data.current_file.filename || '...';
                     progressTextGeneral.textContent = `Geral: ${data.progress_general}% (${data.files_processed}/${data.total_files}) | Processando: ${currentFileName}`;
                     
-                    // Atualizar o item atual em processamento
                     if (data.status === 'running' && data.current_file.full_path) {
-                        const currentItem = document.querySelector(`#queue-list li[data-filepath="${data.current_file.full_path}"]`);
+                        const normalizedPath = data.current_file.full_path.replace(/\\/g, '/');
+                        const currentItem = document.querySelector(`#queue-list li[data-filepath="${normalizedPath}"]`);
+                        
                         if (currentItem) {
                             const statusP = currentItem.querySelector('.status-text');
                             const individualProgress = currentItem.querySelector('.individual-progress');
                             
-                            // Marca todos os itens anteriores como concluídos
                             let previousSibling = currentItem.previousElementSibling;
                             while(previousSibling) {
                                 moveItemToCompleted(previousSibling.dataset.filepath);
@@ -129,15 +132,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                         }
                     }
 
-                    // Finalizar o processo
-                    if (data.status === 'completed') {
+                    if (data.status === 'completed' || data.status === 'stopped') {
                         clearInterval(progressInterval);
-                        progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
                         isProcessing = false;
                         
-                        // Move todos os itens restantes na fila para concluídos
-                        const remainingItems = queueList.querySelectorAll('li');
-                        remainingItems.forEach(item => moveItemToCompleted(item.dataset.filepath));
+                        if(data.status === 'completed') {
+                            progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                            const remainingItems = queueList.querySelectorAll('li');
+                            remainingItems.forEach(item => moveItemToCompleted(item.dataset.filepath));
+                        } else { 
+                            progressTextGeneral.textContent = `Processo interrompido pelo usuário. ${data.files_processed} de ${data.total_files} arquivos foram concluídos.`;
+                        }
                     }
                 })
                 .catch(error => {
@@ -153,7 +158,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const folderPath = await api.open_folder_dialog('Selecione a Pasta de Origem');
             if (folderPath) {
                 origemInput.value = folderPath;
-                // Futuramente, poderíamos auto-escanear e popular a fila aqui
+                if (!isProcessing) {
+                    queueList.innerHTML = '';
+                }
+                console.log(`Pasta de origem selecionada. Escaneando ${folderPath}...`);
+                try {
+                    const files = await api.scan_folder_recursively(folderPath);
+                    if (files && files.length > 0) {
+                        console.log(`Adicionando ${files.length} arquivos à fila.`);
+                        files.forEach(addFileToQueue);
+                    } else {
+                        alert("Nenhum arquivo de mídia compatível foi encontrado na pasta selecionada.");
+                    }
+                } catch (error) {
+                    console.error("Erro ao escanear a pasta de origem:", error);
+                    alert("Ocorreu um erro ao tentar escanear a pasta. Verifique o console para mais detalhes.");
+                }
             }
         });
 
@@ -178,7 +198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert('Não é possível limpar a fila durante o processamento.');
             }
         });
-
+        
         clearCompletedBtn.addEventListener('click', () => {
             completedList.innerHTML = '';
         });
@@ -219,7 +239,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-        // A lógica do stopButton será implementada em uma fase futura.
+        stopButton.addEventListener('click', () => {
+            if (!isProcessing) {
+                alert('Nenhum processo em andamento para parar.');
+                return;
+            }
+
+            console.log("Enviando sinal de parada para o servidor...");
+            fetch('/stop-processing', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'sucesso') {
+                        console.log("Servidor confirmou o recebimento do sinal de parada.");
+                        progressTextGeneral.textContent = "Parando o processo... Aguarde.";
+                    } else {
+                        alert(`Erro ao tentar parar o processo: ${data.message}`);
+                    }
+                })
+                .catch(error => {
+                    console.error("Erro na requisição para parar:", error);
+                    alert("Falha de comunicação ao tentar parar o processo.");
+                });
+        });
+
     } catch (error) {
         console.error("ERRO CRÍTICO: API não encontrada.", error);
         alert("Falha ao conectar à API. Reinicie a aplicação.");

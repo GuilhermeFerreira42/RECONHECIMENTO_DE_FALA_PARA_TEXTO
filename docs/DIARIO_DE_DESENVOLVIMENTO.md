@@ -45,141 +45,67 @@ Este documento serve como um log do progresso do projeto, organizado por fases.
     -   **Resolvida uma condição de corrida de manipulação do DOM**, implementando uma fila de espera no JavaScript para mover os itens de forma estável e incremental da lista "Para Processar" para "Processados".
     -   O polling é interrompido (`clearInterval`) corretamente ao final do processo.
 
----
+## **Fase 5: Conversão para Aplicação Híbrida (Concluída)**
 
-#### **Checklist da Fase 5**
+### Objetivo
+Converter a aplicação web Flask em uma aplicação de desktop híbrida e funcional, estabelecendo uma ponte de comunicação robusta entre o front-end (JavaScript) e o back-end (Python).
 
-  * [ ] **1. Ambiente e Dependências**
+## Realizações
 
-      * [ ] Adicionar `pywebview` ao arquivo `requirements.txt`.
-      * [ ] Instalar a nova dependência no ambiente de desenvolvimento (`pip install -r requirements.txt`).
+*   **Estrutura de Código**: A arquitetura do projeto foi modificada para suportar o modelo híbrido.
+    *   O arquivo `requirements.txt` foi atualizado para incluir `pywebview` como uma dependência chave.
+    *   Um novo arquivo, `app/api.py`, foi criado para servir como a "ponte" de comunicação, expondo métodos Python para o JavaScript.
+*   **Ponto de Entrada da Aplicação**: O arquivo `run.py` foi completamente reestruturado. Ele agora gerencia o início do servidor Flask em uma thread separada e lança a interface do usuário em uma janela de desktop nativa usando `pywebview`.
+*   **Resolução de Desafios Técnicos**: A conexão inicial entre o front-end e o back-end apresentou um desafio significativo de timing e segurança.
+    *   **Problema de "Condição de Corrida"**: A solução foi implementada através de uma abordagem de múltiplas camadas:
+        *   **Espera Ativa no Back-end (`run.py`)**: Uma função (`is_server_ready`) foi implementada para garantir que a janela do `pywebview` só seja criada após a confirmação de que o servidor Flask está totalmente operacional.
+        *   **Polling no Front-end (`main.js`, `ui.js`)**: Funções de espera assíncrona (`waitForPywebviewApi`) foram adicionadas ao JavaScript para garantir que o código só tente usar a API quando ela estiver de fato presente no `window`.
+        *   **Política de Segurança de Conteúdo (CSP)**: Headers de CSP foram configurados no `__init__.py` do Flask para permitir o carregamento correto de todos os recursos externos (CSS, fontes, etc.) dentro do ambiente do `pywebview`.
 
-  * [ ] **2. Criação da API de Interação (A Ponte)**
+### Validação
+Ao final da fase, a aplicação estava iniciando com sucesso em uma janela de desktop nativa, com a ponte de comunicação `window.pywebview.api` funcionando confiavelmente.
 
-      * [ ] Criar um novo arquivo chamado `app/api.py`.
-      * [ ] Dentro de `api.py`, definir uma classe Python (ex: `class Api:`).
-      * [ ] Dentro desta classe, criar os métodos "esqueleto" que o JavaScript precisará chamar. Estes métodos, por enquanto, podem apenas imprimir uma mensagem para confirmar que foram chamados.
-          * `def open_file_dialog(self):` (para adicionar arquivos avulsos)
-          * `def open_folder_dialog(self):` (para selecionar as pastas de origem/destino)
-          * `def open_folder_in_explorer(self, folder_path):` (para a ação "Abrir Local")
+## **Fase 6: Funcionalidades Finais e Interatividade (Parcialmente Concluída)**
 
-  * [ ] **3. Reestruturação do Ponto de Entrada (`run.py`)**
+### Objetivo
+Utilizar a ponte de comunicação estabelecida na Fase 5 para implementar as funcionalidades interativas da interface do usuário, tornando a aplicação plenamente funcional.
 
-      * [ ] Modificar `run.py` para que ele não inicie mais o servidor Flask com `app.run()`. Este será o arquivo que lançará a janela do desktop.
-      * [ ] O script `run.py` será responsável por:
-          * Importar o `pywebview`, a `app` do Flask e a nova classe `Api`.
-          * Instanciar a nossa API: `api = Api()`.
-          * Iniciar o servidor Flask em uma *thread* separada (para que ele não bloqueie a janela da interface).
-          * Criar a janela principal da aplicação usando `pywebview.create_window()`, passando:
-              * O título da janela (ex: "Painel de Transcrição").
-              * A URL da nossa aplicação Flask (`app`).
-              * O objeto `api` para que ele seja "injetado" no JavaScript e se torne acessível.
+### Realizações
 
-  * [ ] **4. Teste e Validação da Arquitetura Híbrida**
+*   **API de Interação Completa (`app/api.py`)**: A lógica dos métodos da API foi totalmente implementada usando `tkinter`, permitindo que a aplicação abra caixas de diálogo nativas do sistema operacional para seleção de arquivos e pastas.
+*   **Interface Reativa (`main.js`, `index.html`)**:
+    *   Os botões para selecionar a pasta de origem e destino, bem como o botão para "+ Adicionar Arquivo", foram conectados com sucesso às suas respectivas funções na API Python.
+    *   A interface agora responde a essas ações, preenchendo os campos de texto e adicionando arquivos individuais à fila de processamento.
+    *   Os botões "Limpar Fila" e "Limpar Concluídos" foram implementados e estão funcionais.
+*   **Menu de Contexto (`ui.js`)**: O menu de contexto (acessado com o botão direito do mouse) foi totalmente implementado. As ações "Remover da Fila" e "Abrir Local do Arquivo" estão funcionais, interagindo tanto com a interface quanto com a API do sistema de arquivos.
+*   **Lógica de Processamento Refatorada**: A responsabilidade de compilar a lista de arquivos a serem processados foi movida com sucesso do back-end para o front-end. A rota `/start-processing` foi atualizada para aceitar uma lista explícita de arquivos, tornando a arquitetura mais flexível.
 
-      * [ ] Executar o novo `run.py`.
-      * [ ] **Verificar:** A aplicação deve abrir em uma janela de desktop nativa, e não mais em uma aba do navegador.
-      * [ ] **Verificar:** A interface web deve ser carregada e parecer funcional como antes.
-      * [ ] **Verificar (passo crucial):** Abrir as ferramentas de desenvolvedor da janela (`pywebview` permite isso em modo debug) e testar no console se o objeto da API está acessível via JavaScript (ex: digitando `window.pywebview.api`).
+## Itens Pendentes (Transferidos para a Próxima Fase de Trabalho)
 
----
+*   **Escaneamento de Pasta de Origem**: A lógica para escanear automaticamente uma pasta de origem selecionada e popular a fila de arquivos ainda precisa ser implementada.
+*   **Controle de Processo**: A funcionalidade do botão "PARAR PROCESSO" para interromper uma transcrição em andamento precisa ser desenvolvida.
 
+## **Fase 6: Funcionalidades Finais e Interatividade (Concluída)**
 
-### **Estrutura de Arquivos e Diretórios (Pós-Fase 5)**
+### Objetivo
+Utilizar a ponte de comunicação estabelecida na Fase 5 para implementar todas as funcionalidades interativas da interface do usuário, tornando a aplicação plenamente funcional, robusta e amigável.
 
-Após a conclusão desta fase, a estrutura do seu projeto será ligeiramente modificada para acomodar a nova lógica da aplicação híbrida.
+### Realizações
 
-```
-TranscricaoApp/
-├── README.md
-├── app/
-│   ├── __init__.py
-│   ├── api.py           <-- NOVO ARQUIVO (conterá a ponte JS-Python)
-│   ├── routes.py        (continua responsável pelas rotas HTTP internas)
-│   ├── static/
-│   │   ├── css/
-│   │   │   └── style.css
-│   │   └── js/
-│   │       ├── main.js
-│   │       └── ui.js
-│   ├── templates/
-│   │   └── index.html
-│   └── transcriber.py
-│
-├── docs/
-│   └── ... (sem alterações nesta fase)
-│
-├── run.py               <-- ARQUIVO SIGNIFICATIVAMENTE MODIFICADO (agora inicia o pywebview)
-│
-└── requirements.txt     <-- ARQUIVO MODIFICADO (incluirá 'pywebview')
-```
+* [cite_start]**API de Interação Completa (`app/api.py`):** A ponte de comunicação com o sistema de arquivos foi totalmente implementada usando `tkinter` para abrir caixas de diálogo nativas do sistema operacional[cite: 184], permitindo a seleção de arquivos e pastas de forma intuitiva.
 
-Com este plano, ao final da Fase 5, teremos uma base sólida de desktop. A aplicação ainda terá a mesma aparência, mas por "debaixo do capô" ela terá os superpoderes necessários para que, na **Fase 6**, possamos implementar as funcionalidades de interação com o sistema de arquivos de forma simples e direta.
+* **Interface Reativa e Inteligente (`main.js`):**
+    * [cite_start]Os botões para selecionar a pasta de origem e destino, bem como o de "+ Adicionar Arquivo", foram conectados com sucesso às suas respectivas funções na API Python[cite: 185, 186].
+    * **Escaneamento Automático:** Foi implementada a funcionalidade crucial de escaneamento de pastas. [cite_start]Ao selecionar um diretório de origem, a aplicação agora varre recursivamente a pasta e popula automaticamente a fila de processamento com todos os arquivos de mídia encontrados.
+    * **Correção de Inconsistência de Caminhos:** Foi resolvido um bug crítico relacionado a separadores de caminho (`\` vs. `/`), garantindo que a atualização de status individual dos arquivos funcione perfeitamente no Windows.
 
----
+* [cite_start]**Arquitetura Flexível:** A lógica de processamento foi refatorada com sucesso[cite: 190]. [cite_start]A responsabilidade de compilar a lista de arquivos a serem processados foi movida para o front-end, e a rota `/start-processing` foi atualizada para aceitar uma lista explícita de arquivos, tornando o sistema mais modular[cite: 191].
 
-### **Fase 6: Funcionalidades Finais e Interatividade (no Ambiente Híbrido)**
+* **Controle Total do Processo:**
+    * [cite_start]A funcionalidade do botão "PARAR PROCESSO" foi desenvolvida e integrada, permitindo ao usuário interromper uma transcrição em andamento de forma segura através de um sinalizador na thread de back-end[cite: 193].
+    * [cite_start]Os botões "Limpar Fila" e "Limpar Concluídos" foram implementados e estão funcionais, permitindo ao usuário gerenciar facilmente as listas da interface[cite: 187].
 
-Com a ponte de comunicação entre Python e JavaScript estabelecida na Fase 5, agora podemos implementar as funcionalidades de forma poderosa e amigável para o usuário.
+* [cite_start]**Melhoria da Experiência do Usuário:** O menu de contexto (acessado com o botão direito do mouse) foi totalmente implementado, com as ações "Remover da Fila" e "Abrir Local do Arquivo" funcionando como esperado[cite: 188, 189].
 
-#### **Checklist da Fase 6**
-
-* [ ] **1. Lógica da API de Interação (`app/api.py`)**
-    * [ ] Implementar a lógica real dos métodos na classe `Api` usando bibliotecas Python nativas (como `tkinter.filedialog`, `os`, `subprocess`).
-        * `open_folder_dialog()`: Deve abrir um seletor de pastas e retornar o caminho da pasta selecionada.
-        * `open_file_dialog()`: Deve abrir um seletor de arquivos (permitindo múltiplos) e retornar uma lista com os caminhos dos arquivos selecionados.
-        * `open_folder_in_explorer(path)`: Deve receber um caminho e abrir o explorador de arquivos do sistema nesse local.
-
-* [ ] **2. Conexão do Front-End com a API Híbrida (`app/static/js/main.js`)**
-    * [ ] **Seleção de Origem/Destino:**
-        * [ ] Adicionar botões "Selecionar Pasta" ao lado dos campos de Origem e Destino no `index.html`.
-        * [ ] Em `main.js`, fazer esses botões chamarem `window.pywebview.api.open_folder_dialog()`.
-        * [ ] O caminho retornado pela API deve preencher o valor do campo de input correspondente.
-    * [cite_start][ ] **Botão "+ Adicionar Arquivo":** [cite: 141, 151, 185]
-        * [ ] Conectar o botão para que ele chame `window.pywebview.api.open_file_dialog()`.
-        * [ ] Para cada arquivo retornado pela API, criar dinamicamente um novo item na lista "Arquivos para Processar".
-    * [ ] **Lógica de Início Modificada:**
-        * [ ] Alterar a função do botão "INICIAR TRANSCRIÇÃO". Em vez de o back-end escanear uma pasta, o front-end agora será responsável por coletar todos os caminhos de arquivo da lista "Arquivos para Processar" e enviá-los de uma vez para o back-end.
-        * [ ] Modificar a rota `/start-processing` em `routes.py` para receber uma lista explícita de arquivos, em vez de um caminho de pasta para escanear.
-
-* [ ] **3. [cite_start]Implementação do Menu de Contexto (`app/static/js/ui.js` e `main.js`)** [cite: 144, 189]
-    * [ ] **Ação "Remover da Fila":** Implementar a lógica em `main.js` para remover o item selecionado da lista da interface (só deve funcionar antes de o processo iniciar).
-    * [ ] **Ação "Abrir Local do Arquivo":**
-        * [ ] Fazer esta opção chamar `window.pywebview.api.open_folder_in_explorer(path)`.
-        * [ ] O `path` a ser aberto deve ser extraído do item da lista (seja da lista de processamento ou da de concluídos).
-
-* [ ] **4. Controles de Processo e Limpeza**
-    * [cite_start][ ] **Botão "PARAR PROCESSO":** Conectar o botão para fazer um `fetch` à rota `/stop-processing`, conforme planejado anteriormente. [cite: 143, 188]
-    * [cite_start][ ] **Botões "Limpar Fila" e "Limpar Concluídos":** [cite: 142, 187] Implementar a lógica em `main.js` para limpar o conteúdo das listas da interface.
-
----
-
-### **Fase 7: Documentação e Finalização**
-
-[cite_start]Esta fase final garante que o projeto seja compreensível, fácil de instalar, usar e manter. [cite: 191]
-
-#### **Checklist da Fase 7**
-
-* [ ] **1. Documentação para o Usuário (`README.md`)**
-    * [cite_start][ ] Atualizar as "Instruções de Instalação" para incluir `pywebview` e outras possíveis dependências do sistema operacional. [cite: 191]
-    * [ ] Reescrever a seção "Como Instalar e Rodar", explicando que agora se executa `run.py` para abrir uma aplicação de desktop.
-    * [ ] Detalhar todas as novas funcionalidades interativas: como selecionar pastas, adicionar arquivos avulsos, usar o menu de contexto, etc.
-    * [ ] Adicionar screenshots da aplicação final em funcionamento.
-
-* [ ] **2. Documentação Técnica (`docs/`)**
-    * [cite_start][ ] **Atualizar `ARQUITETURA.md`:** [cite: 192]
-        * Adicionar uma nova seção descrevendo a "Ponte de Interação (API Híbrida)", explicando o papel do `pywebview` e do arquivo `app/api.py`.
-        * [cite_start]Revisar as responsabilidades do Front-end e Back-end para refletir a nova arquitetura. [cite: 98]
-    * [ ] **Criar `HYBRID_API.md`:**
-        * Criar um novo documento para detalhar a API da ponte de interação.
-        * Listar cada função em `app/api.py`, seus parâmetros e o que ela retorna para o JavaScript (ex: `open_file_dialog() -> list[str]`).
-    * [cite_start][ ] **Atualizar `FLUXO_DE_TRABALHO.md`:** [cite: 192]
-        * Revisar os fluxos de trabalho do usuário para incorporar o uso dos novos botões de seleção de arquivos/pastas e as ações do menu de contexto.
-    * [cite_start][ ] **Finalizar `DIARIO_DE_DESENVOLVIMENTO.md`:** [cite: 122]
-        * Marcar as Fases 5, 6 e 7 como "Concluídas", resumindo as realizações de cada uma.
-
-* [ ] **3. Limpeza e Revisão Final do Código**
-    * [cite_start][ ] Remover `console.log` e `print()` de depuração que não são mais necessários. [cite: 193]
-    * [cite_start][ ] Adicionar comentários ao código em partes complexas, especialmente em `run.py`, `app/api.py` e na lógica de `main.js` que lida com as chamadas da API híbrida. [cite: 193]
-    * [ ] Garantir que o código esteja formatado de forma limpa e consistente.
-    * [ ] Verificar se o arquivo `.gitignore` está configurado corretamente para ignorar arquivos de cache do Python (ex: `__pycache__/`).
+### Validação
+Ao final da Fase 6, a aplicação atingiu o status de "feature-complete". Todas as interações propostas para a interface do usuário foram implementadas, testadas e validadas, resultando em uma ferramenta de desktop híbrida, poderosa e funcional.

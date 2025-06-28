@@ -4,6 +4,9 @@ import subprocess
 import sys
 from tkinter import Tk, filedialog
 
+# Definimos as extensões suportadas aqui para que a API possa usá-las
+SUPPORTED_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.m4a', '.flac')
+
 class Api:
     """
     A 'ponte' que expõe a lógica do back-end para ser chamada pelo JavaScript.
@@ -40,6 +43,27 @@ class Api:
         folder_path = filedialog.askdirectory(parent=root, title=title)
         root.destroy()
         return folder_path if folder_path else None
+
+    def scan_folder_recursively(self, folder_path):
+        """
+        [NOVA FUNÇÃO]
+        Escaneia uma pasta recursivamente e retorna uma lista de todos os
+        arquivos de mídia com extensões suportadas.
+        """
+        print(f"[API] Escaneando a pasta: {folder_path}")
+        if not folder_path or not os.path.isdir(folder_path):
+            return []
+
+        media_files = []
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(SUPPORTED_EXTENSIONS):
+                    full_path = os.path.join(root, file)
+                    normalized_path = full_path.replace('\\', '/')
+                    media_files.append(normalized_path)
+        
+        print(f"[API] Encontrados {len(media_files)} arquivos de mídia.")
+        return media_files
 
     def open_folder_in_explorer(self, path):
         """
