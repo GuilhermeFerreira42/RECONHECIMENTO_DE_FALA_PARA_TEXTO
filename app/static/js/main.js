@@ -52,7 +52,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const li = document.createElement('li');
-            li.className = 'group relative flex flex-col px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors';
+            li.className = 'group relative flex flex-col px-5 py-3 border-b border-gray-100 hover:bg-gray-100 transition-colors';
             li.setAttribute('data-filepath', normalizedPath);
             li.setAttribute('data-filename', fileName);
             
@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const completedFilename = fileName.replace(/\.[^/.]+$/, ".txt");
                 const li = document.createElement('li');
-                li.className = 'group relative flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors';
+                li.className = 'group relative flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition-colors';
                 const destinationPath = (destinoInput.value.replace(/\\/g, '/') + '/' + completedFilename);
                 li.setAttribute('data-filepath', destinationPath);
                 li.setAttribute('data-filename', completedFilename);

@@ -65,25 +65,50 @@ class Api:
         print(f"[API] Encontrados {len(media_files)} arquivos de mídia.")
         return media_files
 
+    # ANOTAÇÃO: Função atualizada para selecionar o arquivo no explorador.
     def open_folder_in_explorer(self, path):
         """
-        Abre o gerenciador de arquivos do sistema operacional no caminho especificado.
-        Se o caminho for um arquivo, abre a pasta que o contém.
+        Abre o gerenciador de arquivos e seleciona/revela o arquivo especificado.
         """
-        print(f"[API] Chamada recebida: open_folder_in_explorer com o caminho: {path}")
+        print(f"[API] Chamada recebida para revelar o arquivo: {path}")
         
-        # Garante que o caminho seja válido e, se for um arquivo, pega o diretório.
-        if os.path.isfile(path):
-            path = os.path.dirname(path)
+        normalized_path = os.path.realpath(path)
 
-        if not path or not os.path.isdir(path):
-            print(f"[ERRO API] Caminho do diretório é inválido ou não existe: {path}")
+        if not os.path.exists(normalized_path):
+            print(f"[ERRO API] Caminho não existe: {normalized_path}")
             return
 
-        # Abre o explorador de arquivos dependendo do sistema operacional.
-        if sys.platform == 'win32':
-            os.startfile(os.path.realpath(path))
-        elif sys.platform == 'darwin': # macOS
-            subprocess.Popen(['open', path])
-        else: # linux
-            subprocess.Popen(['xdg-open', path]) 
+        try:
+            if sys.platform == 'win32':
+                # No Windows, o argumento '/select,' abre a pasta e destaca o arquivo.
+                subprocess.run(['explorer', '/select,', normalized_path], check=True)
+            elif sys.platform == 'darwin':
+                # No macOS, o argumento '-R' (reveal) faz o mesmo.
+                subprocess.run(['open', '-R', normalized_path], check=True)
+            else:
+                # No Linux, não há um comando universal para selecionar um arquivo.
+                # A abordagem mais segura é abrir a pasta que o contém.
+                directory = os.path.dirname(normalized_path) if os.path.isfile(normalized_path) else normalized_path
+                subprocess.run(['xdg-open', directory], check=True)
+        except Exception as e:
+            print(f"[ERRO API] Falha ao tentar revelar o arquivo no explorador: {e}")
+
+    # ANOTAÇÃO: Nova função para abrir o arquivo em si com o programa padrão do SO.
+    def open_file_natively(self, path):
+        """
+        Abre um arquivo diretamente com seu aplicativo padrão do sistema.
+        """
+        print(f"[API] Chamada recebida: open_file_natively com o caminho: {path}")
+        if not path or not os.path.isfile(path):
+            print(f"[ERRO API] Caminho do arquivo é inválido ou não existe: {path}")
+            return
+            
+        try:
+            if sys.platform == 'win32':
+                os.startfile(os.path.realpath(path))
+            elif sys.platform == 'darwin':
+                subprocess.run(['open', path], check=True)
+            else:
+                subprocess.run(['xdg-open', path], check=True)
+        except Exception as e:
+            print(f"[ERRO API] Falha ao tentar abrir o arquivo nativamente: {e}") 

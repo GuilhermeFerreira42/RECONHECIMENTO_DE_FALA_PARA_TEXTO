@@ -36,13 +36,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentTargetItem = element;
 
             const isQueueItem = currentTargetItem.closest('#queue-list');
-            let menuContent = `<a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>`;
+            const isCompletedItem = currentTargetItem.closest('#completed-list');
+
+            let openFileText = isQueueItem ? "Abrir Mídia Original" : "Abrir Transcrição (.txt)";
+
+            let menuContent = `
+                <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">${openFileText}</a>
+                <a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
+            `;
             
             if (isQueueItem) {
                 menuContent += `<a href="#" id="context-remove" class="block px-4 py-2 text-red-600 hover:bg-red-100">Remover da Fila</a>`;
             }
             contextMenu.innerHTML = menuContent;
 
+            document.getElementById('context-open-file').addEventListener('click', (e) => {
+                e.preventDefault();
+                if (currentTargetItem) {
+                    api.open_file_natively(currentTargetItem.dataset.filepath);
+                }
+                closeContextMenu();
+            });
+            
             document.getElementById('context-open-location').addEventListener('click', (e) => {
                 e.preventDefault();
                 if (currentTargetItem) {
