@@ -52,16 +52,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const li = document.createElement('li');
-            li.className = 'flex flex-col px-5 py-3 border-b border-gray-100';
+            li.className = 'group relative flex flex-col px-5 py-3 border-b border-gray-100 hover:bg-gray-50 transition-colors';
             li.setAttribute('data-filepath', normalizedPath);
             li.setAttribute('data-filename', fileName);
-
+            
             li.innerHTML = `
                 <div class="flex items-center gap-3">
                     <i class="fas fa-video text-gray-500 text-xl"></i>
                     <div class="flex-1 min-w-0">
                         <p class="text-gray-900 font-medium truncate" title="${normalizedPath}">${fileName}</p>
                         <p class="text-gray-500 text-sm status-text">Aguardando na fila...</p>
+                    </div>
+                    <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        <i class="fas fa-ellipsis-v text-gray-500"></i>
                     </div>
                 </div>
                 <div class="mt-2 h-1 bg-transparent rounded-full overflow-hidden">
@@ -81,16 +84,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 const completedFilename = fileName.replace(/\.[^/.]+$/, ".txt");
                 const li = document.createElement('li');
-                li.className = 'flex items-center gap-3 px-5 py-3';
+                li.className = 'group relative flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors';
                 const destinationPath = (destinoInput.value.replace(/\\/g, '/') + '/' + completedFilename);
                 li.setAttribute('data-filepath', destinationPath);
                 li.setAttribute('data-filename', completedFilename);
-
+                
                 li.innerHTML = `
                     <i class="fas fa-file-alt text-green-600 text-xl"></i>
                     <div class="flex-1 min-w-0">
                         <p class="text-gray-900 font-medium truncate" title="${destinationPath}">${completedFilename}</p>
                         <p class="text-gray-500 text-xs">Concluído com sucesso</p>
+                    </div>
+                    <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
+                        <i class="fas fa-ellipsis-v text-gray-500"></i>
                     </div>
                 `;
                 completedList.appendChild(li);
