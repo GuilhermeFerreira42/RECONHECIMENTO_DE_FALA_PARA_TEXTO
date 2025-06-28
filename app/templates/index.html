@@ -9,67 +9,72 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
-<body class="h-screen flex flex-col select-none">
 
-  <header class="flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
-    <div class="flex items-center gap-4">
+<body class="h-screen flex flex-col select-none bg-gray-100">
+
+  <header class="flex items-center justify-between flex-wrap bg-white border-b border-gray-200 px-4 py-3 gap-4">
+    <div class="flex items-center gap-x-6 gap-y-3 flex-wrap">
         <div>
-            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase mb-1">PASTA DE ORIGEM (OPCIONAL)</label>
+            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase mb-1">PASTA DE ORIGEM</label>
             <div class="flex items-center">
-                <input id="origem" type="text" class="w-80 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione uma pasta para carregar em lote..." readonly>
+                <input id="origem" type="text" class="w-64 md:w-72 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione uma pasta para carregar..." readonly>
                 <button id="select-origem-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
             </div>
         </div>
         <div>
             <label for="destino" class="text-xs font-semibold text-gray-500 uppercase mb-1">PASTA DE DESTINO</label>
             <div class="flex items-center">
-                <input id="destino" type="text" class="w-80 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione onde salvar as transcrições..." readonly>
+                <input id="destino" type="text" class="w-64 md:w-72 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md" placeholder="Selecione onde salvar as transcrições..." readonly>
                 <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
             </div>
         </div>
+        <div class="flex items-center pt-5">
+            <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+            <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">
+                Manter estrutura de pastas
+            </label>
+        </div>
     </div>
-    <div class="flex items-center justify-center pl-6 pt-5">
-        <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-        <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">
-            Manter estrutura de pastas da origem
-        </label>
-    </div>
-    <div class="flex gap-3 ml-4">
-      <button id="start-btn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-3 rounded-md text-sm">INICIAR TRANSCRIÇÃO</button>
-      <button id="stop-btn" type="button" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-3 rounded-md text-sm">PARAR PROCESSO</button>
+    <div class="flex gap-3">
+      <button id="start-btn" type="button" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-5 py-2 rounded-md text-sm">INICIAR</button>
+      <button id="stop-btn" type="button" class="bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2 rounded-md text-sm">PARAR</button>
     </div>
   </header>
 
-  <main class="flex flex-1 overflow-hidden p-4 gap-6">
-    <section aria-label="Arquivos para Processar" class="flex flex-col w-1/2 bg-white rounded-md border border-gray-200 shadow-sm">
-        <header class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold">Arquivos para Processar</h2>
+  <main class="flex-1 flex flex-col lg:flex-row overflow-hidden p-4 gap-4">
+    <section aria-label="Arquivos para Processar" class="flex flex-col w-full lg:w-1/2 bg-white rounded-md border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <h2 class="text-base font-semibold">Arquivos para Processar</h2>
             <div class="flex items-center gap-4">
-              <button id="add-file-btn" type="button" class="flex items-center gap-2 text-sm font-semibold"><i class="fas fa-plus"></i> Adicionar</button>
-              <button id="clear-queue-btn" type="button" class="flex items-center gap-2 text-sm font-semibold"><i class="fas fa-trash-alt"></i> Limpar Fila</button>
+              <button id="add-file-btn" type="button" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-plus"></i> Adicionar</button>
+              <button id="clear-queue-btn" type="button" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-red-600"><i class="fas fa-trash-alt"></i> Limpar Fila</button>
             </div>
         </header>
-        <div class="p-5 border-b border-gray-200">
-            <p id="progress-text-general" class="text-center text-sm mb-1 text-gray-600">Progresso Geral</p>
-            <div class="w-full h-4 bg-gray-200 rounded-full">
-                <div id="progress-bar-general" class="h-4 bg-blue-600 rounded-full" style="width: 0%;"></div>
-            </div>
-        </div>
         <ul id="queue-list" class="flex-1 overflow-y-auto scrollbar-thin">
             </ul>
     </section>
-    <section aria-label="Arquivos Processados" class="flex flex-col w-1/2 bg-white rounded-md border border-gray-200 shadow-sm">
-        <header class="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <h2 class="text-lg font-semibold">Arquivos Processados</h2>
-            <button id="clear-completed-btn" type="button" class="flex items-center gap-2 text-sm font-semibold"><i class="fas fa-broom"></i> Limpar</button>
+
+    <section aria-label="Arquivos Processados" class="flex flex-col w-full lg:w-1/2 bg-white rounded-md border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <h2 class="text-base font-semibold">Arquivos Processados</h2>
+            <button id="clear-completed-btn" type="button" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"><i class="fas fa-broom"></i> Limpar</button>
         </header>
         <ul id="completed-list" class="flex-1 overflow-y-auto scrollbar-thin">
             </ul>
     </section>
   </main>
 
-  <div id="contextMenu" class="hidden fixed z-50 w-52 bg-white rounded-md shadow-lg border py-1 text-sm">
+  <footer class="bg-white border-t border-gray-200 px-4 py-2 text-sm">
+    <div class="w-full">
+        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600">Pronto</p>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div id="progress-bar-general" class="h-2 bg-blue-600 rounded-full" style="width: 0%;"></div>
+        </div>
     </div>
+  </footer>
+
+  <div id="contextMenu" class="hidden fixed z-50 w-52 bg-white rounded-md shadow-lg border py-1 text-sm">
+  </div>
   
   <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
