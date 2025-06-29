@@ -2,11 +2,11 @@
 from app import app
 from flask import render_template, request, jsonify
 import threading
-from .transcriber import TranscriptionManager, load_vosk_model
+from .transcriber import TranscriptionManager, load_whisper_model
 
-print("Carregando o modelo Vosk na inicialização...")
-VOSK_MODEL = load_vosk_model()
-print("Modelo carregado e pronto." if VOSK_MODEL else "ERRO: Modelo não pôde ser carregado.")
+print("Carregando o modelo Whisper na inicialização...")
+WHISPER_MODEL = load_whisper_model("base")
+print("Modelo carregado e pronto." if WHISPER_MODEL else "ERRO: Modelo não pôde ser carregado.")
 
 transcription_job = None
 
@@ -32,13 +32,13 @@ def start_processing():
     if keep_structure and not source_path:
         return jsonify({'status': 'erro', 'message': 'Pasta de origem não fornecida para manter a estrutura.'}), 400
         
-    if not VOSK_MODEL:
-        return jsonify({'status': 'erro', 'message': 'Modelo Vosk não carregado.'}), 500
+    if not WHISPER_MODEL:
+        return jsonify({'status': 'erro', 'message': 'Modelo Whisper não carregado.'}), 500
 
     # [MODIFICADO] Passando os novos parâmetros para o TranscriptionManager
     transcription_job = TranscriptionManager(
         dest_path=dest_path, 
-        model=VOSK_MODEL, 
+        model=WHISPER_MODEL,
         file_list=file_list,
         keep_structure=keep_structure,
         source_path=source_path

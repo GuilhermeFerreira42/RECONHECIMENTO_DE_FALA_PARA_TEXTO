@@ -3,10 +3,10 @@
 import os
 import sys
 import subprocess
-import json
+import threading
 from pathlib import Path
-import vosk
-import wave
+import whisper
+import torch
 import time
 
 # Funções de utilidade
@@ -60,7 +60,7 @@ class TranscriptionManager:
     def _transcribe_single_file(self, file_path_str):
         file_path = Path(file_path_str)
         base_name = file_path.name
-        
+
         self.current_file_info = {
             "filename": base_name,
             "progress": 0,
@@ -68,6 +68,7 @@ class TranscriptionManager:
         }
         print(f"\n--- Processando: {base_name} ---")
 
+        # A lógica de criação de pastas de destino permanece a mesma
         output_txt_path_obj = None
         if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
             relative_path = file_path.relative_to(self.source_path)
@@ -76,66 +77,102 @@ class TranscriptionManager:
             output_txt_path_obj = self.dest_path / file_path.with_suffix('.txt').name
 
         output_txt_path_obj.parent.mkdir(parents=True, exist_ok=True)
-      
+
         temp_wav_file = self.dest_path / f"temp_{file_path.stem}.wav"
-        
+
+        # Etapa 1: Conversão para WAV (10% do progresso)
         print("    -> Convertendo para WAV...")
+        self.current_file_info["progress"] = 5
         if not convert_to_wav(str(file_path), str(temp_wav_file)):
             self.current_file_info["progress"] = "Erro na conversão"
             return
+        
+        self.current_file_info["progress"] = 10
+        print("    -> Conversão concluída.")
 
-        print("    -> Transcrevendo áudio...")
-        transcript_text = None 
+        # Etapa 2: Transcrição com Whisper (80% do progresso)
+        print("     -> Transcrevendo áudio com Whisper...")
+        transcript_text = None
+        
+        # Estimar tempo de transcrição baseado no tamanho do arquivo
         try:
-            with wave.open(str(temp_wav_file), "rb") as wf:
-                total_frames = wf.getnframes()
-                if total_frames == 0:
-                    print("[AVISO] Arquivo WAV está vazio ou corrompido. Pulando.")
-                    self.current_file_info["progress"] = 100
-                    return
+            file_size_mb = temp_wav_file.stat().st_size / (1024 * 1024)
+            # Estimativa: ~1MB por minuto de áudio, processamento ~2x mais rápido que tempo real
+            estimated_duration_seconds = file_size_mb * 30  # Estimativa aproximada
+            progress_update_interval = max(1, estimated_duration_seconds / 20)  # 20 atualizações durante a transcrição
+            
+            print(f"    -> Arquivo estimado: {file_size_mb:.1f}MB, tempo estimado: {estimated_duration_seconds:.1f}s")
+            
+        except Exception as e:
+            print(f"    -> Não foi possível estimar tempo: {e}")
+            progress_update_interval = 2  # Fallback: atualizar a cada 2 segundos
+            estimated_duration_seconds = 60  # Fallback: 60 segundos
+        
+        try:
+            if self.stop_requested:
+                print("    -> Parada detectada antes da transcrição.")
+                return
 
-                recognizer = vosk.KaldiRecognizer(self.model, wf.getframerate())
-                full_transcript = []
-                while True:
+            # Iniciar thread de simulação de progresso
+            progress_thread = None
+            progress_start_time = time.time()
+            
+            def simulate_progress():
+                nonlocal progress_thread
+                while not self.stop_requested and self.current_file_info["progress"] < 90:
+                    time.sleep(progress_update_interval)
                     if self.stop_requested:
-                        print("    -> Parada detectada durante a transcrição.")
                         break
+                    
+                    elapsed_time = time.time() - progress_start_time
+                    # Simular progresso de 10% a 90% durante a transcrição
+                    progress_percentage = min(90, 10 + int((elapsed_time / estimated_duration_seconds) * 80))
+                    self.current_file_info["progress"] = progress_percentage
+            
+            # Iniciar simulação de progresso
+            progress_thread = threading.Thread(target=simulate_progress)
+            progress_thread.daemon = True
+            progress_thread.start()
 
-                    data = wf.readframes(4000)
-                    if len(data) == 0:
-                        break
-                        
-                    frames_read = wf.tell()
-                    self.current_file_info["progress"] = int((frames_read / total_frames) * 100)
-                    recognizer.AcceptWaveform(data)
+            # Executar a transcrição do Whisper
+            result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
+            transcript_text = result['text'].strip()
 
-                if not self.stop_requested:
-                    final_result = json.loads(recognizer.FinalResult())
-                    full_transcript.append(final_result.get('text', ''))
-                    transcript_text = ' '.join(full_transcript).strip()
-                    self.current_file_info["progress"] = 100
+            # Aguardar thread de progresso terminar
+            if progress_thread and progress_thread.is_alive():
+                progress_thread.join(timeout=1)
+
+            self.current_file_info["progress"] = 95
+            print("     -> Transcrição concluída.")
 
         except Exception as e:
-            print(f"[ERRO] Falha ao ler ou transcrever o arquivo WAV: {e}")
+            print(f"[ERRO] Falha ao transcrever com o Whisper: {e}")
             self.current_file_info["progress"] = "Erro na transcrição"
-        
+            return
+
+        # Etapa 3: Salvamento do arquivo (10% do progresso)
         if transcript_text and not self.stop_requested:
+            self.current_file_info["progress"] = 98
             with open(output_txt_path_obj, 'w', encoding='utf-8') as f:
                 f.write(transcript_text)
             print(f"    -> Salvo em: {output_txt_path_obj}")
         else:
             print(f"    -> Nenhuma transcrição gerada ou processo interrompido. Arquivo de texto não foi salvo.")
 
+        # Limpeza final
         try:
             os.remove(temp_wav_file)
             print(f"    -> Arquivo temporário removido.")
         except OSError as e:
             print(f"[ERRO] Não foi possível remover o arquivo temporário {temp_wav_file}: {e}")
 
+        # Progresso final
+        self.current_file_info["progress"] = 100
+
     def run_transcription(self):
         if not self.model:
             self.status = "error"
-            print("[ERRO] Modelo Vosk não está carregado.")
+            print("[ERRO] Modelo Whisper não está carregado.")
             return
         if not self.files_to_process:
             self.status = "completed"
@@ -183,14 +220,16 @@ class TranscriptionManager:
             "current_file": self.current_file_info
         }
 
-def load_vosk_model():
-    base_path = Path(__file__).resolve().parent.parent
-    model_path = base_path / "vendor" / "vosk-model"
-    if not model_path.exists():
-        return None
+def load_whisper_model(model_name="base"):
+    """
+    Carrega um modelo do Whisper especificado.
+    Modelos disponíveis: tiny, base, small, medium, large.
+    """
+    print(f"Carregando o modelo Whisper: {model_name}...")
     try:
-        model = vosk.Model(str(model_path))
+        model = whisper.load_model(model_name)
+        print(f"Modelo {model_name} carregado com sucesso.")
         return model
     except Exception as e:
-        print(f"Erro ao carregar modelo vosk: {e}")
+        print(f"Erro ao carregar modelo Whisper: {e}")
         return None
