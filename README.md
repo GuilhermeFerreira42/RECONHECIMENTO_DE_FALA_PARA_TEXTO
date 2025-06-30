@@ -1,62 +1,113 @@
-# Painel de Transcrição em Lote
+# Reconhecimento de Fala para Texto
 
-Este é um aplicativo de desktop com interface web, construído em Python e Flask, para transcrever múltiplos arquivos de áudio e vídeo de forma automatizada. A ferramenta é ideal para processar grandes volumes de conteúdo, como módulos de cursos, palestras ou entrevistas, mantendo a organização original das pastas.
+[![Python](https://img.shields.io/badge/Python-3.8+-blue)](https://www.python.org/)
+[![Flask](https://img.shields.io/badge/Flask-2.0+-orange)](https://flask.palletsprojects.com/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-green)](https://pytorch.org/)
+[![License](https://img.shields.io/badge/License-MIT-purple)](LICENSE)
 
-## Features Principais
+## 🎯 Descrição
+Sistema de reconhecimento de fala para texto com suporte a múltiplos motores de IA: **Whisper (OpenAI)** e **Vosk**. Inclui interface desktop via `pywebview` e seletor dinâmico de modelos.
 
--   **Processamento em Lote:** Transcreva uma pasta inteira, incluindo todas as suas subpastas, com um único comando.
--   **Estrutura de Pastas Espelhada:** A estrutura de diretórios da sua pasta de origem é perfeitamente replicada na pasta de destino, substituindo os arquivos de mídia por suas transcrições em `.txt`.
--   **Feedback em Tempo Real:** Acompanhe o progresso geral e o status de cada arquivo individualmente através da interface web.
--   **Flexibilidade:** Adicione arquivos avulsos de qualquer local para serem processados junto com o lote principal.
--   **Autocontido:** As dependências externas como o FFmpeg são empacotadas no projeto para facilitar a instalação e o uso (requer download do modelo de linguagem).
+## 📦 Principais Recursos
+- ✅ Suporte a **Whisper** (5 tamanhos de modelo)
+- ✅ Suporte a **Vosk** (processamento offline)
+- ✅ Seletor dinâmico de modelos na interface
+- ✅ Aceleração por GPU (CUDA) para Whisper
+- ✅ Interface gráfica intuitiva
+- ✅ Suporte a todos os formatos de áudio/vídeo
 
-## Pré-requisitos
+## 🧠 Modelos Disponíveis
 
--   Python 3.8 ou superior
--   Git (para clonar o repositório)
+| Modelo        | Tamanho | Velocidade | Precisão | Uso Recomendado        |
+|---------------|---------|------------|----------|------------------------|
+| `whisper_tiny`| 39MB    | ⚡⚡⚡⚡     | ⭐⭐     | Testes rápidos         |
+| `whisper_base`| 74MB    | ⚡⚡⚡      | ⭐⭐⭐   | Uso geral              |
+| `whisper_small`| 244MB  | ⚡⚡       | ⭐⭐⭐⭐ | Alta precisão           |
+| `whisper_medium`| 769MB | ⚡         | ⭐⭐⭐⭐⭐ | Excelente qualidade     |
+| `whisper_large`| 1550MB | 🐢         | ⭐⭐⭐⭐⭐ | Máxima precisão         |
+| `vosk`        | ~1GB    | ⚡⚡⚡     | ⭐⭐⭐   | Processamento offline   |
 
-## Como Instalar e Rodar (Quick Start)
+## 🚀 Como Usar
 
-1.  **Clone o Repositório:**
-    ```bash
-    git clone [URL_DO_SEU_REPOSITORIO_GIT]
-    cd TranscricaoApp
-    ```
-
-2.  **Instale as Dependências Python:**
-    ```bash
-    pip install -r requirements.txt
-    ```
-
-3.  **Configure as Dependências Externas:**
-    * **FFmpeg:** O projeto já inclui o executável para Windows, Linux e macOS na pasta `vendor/ffmpeg/`. Nenhuma ação é necessária.
-    * **Modelo de Linguagem (Vosk):**
-        * Baixe um modelo de linguagem do [site oficial do Vosk](https://alphacephei.com/vosk/models) (recomenda-se um modelo de português).
-        * Descompacte o arquivo baixado.
-        * Copie o **conteúdo** da pasta do modelo (arquivos como `am`, `conf`, `graph`, etc.) para dentro da pasta `vendor/vosk-model/` no seu projeto.
-
-4.  **Execute a Aplicação:**
-    ```bash
-    python run.py
-    ```
-
-5.  **Acesse a Interface:**
-    * Abra seu navegador e acesse o endereço: `http://127.0.0.1:5000`
-
-## Estrutura do Projeto
-
+### 1. Instale as dependências
+```bash
+python install_whisper_vosk.py
 ```
-TranscricaoApp/
-├── app/                # Contém o código principal da aplicação Flask
-│   ├── static/         # Arquivos CSS e JavaScript
-│   ├── templates/      # Arquivos HTML
-│   ├── transcriber.py  # A lógica principal de transcrição
-│   └── routes.py       # As rotas da API do Flask
-│
-├── docs/               # Documentação detalhada do projeto
-│
-├── vendor/             # Dependências externas (FFmpeg, Modelo Vosk)
-│
-├── run.py              # Ponto de entrada para iniciar a aplicação
-└── requirements.txt    # Lista de bibliotecas Python
+
+Ou manualmente:
+```bash
+# Instalar PyTorch com suporte a GPU (recomendado)
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+
+# Instalar Whisper e Vosk
+pip install openai-whisper vosk flask pywebview tqdm
+```
+
+### 2. Execute a aplicação
+```bash
+python run.py
+```
+
+Na primeira execução, os modelos do Whisper serão baixados automaticamente.
+
+### 3. Use o seletor de modelos
+No cabeçalho da interface:
+1. Clique em "MODELO DE LINGUAGEM"
+2. Escolha entre:
+   - `whisper_tiny` (mais rápido)
+   - `whisper_base` (equilíbrio)
+   - `whisper_large` (máxima precisão)
+   - `vosk` (offline/rápido)
+
+## 🛠️ Configurações Avançadas
+- **Modelos Whisper**: Armazenados em `%USERPROFILE%\.cache\whisper\` (Windows) ou `~/.cache/whisper/` (Linux/Mac)
+- **Modelo Vosk**: Deve estar em `vendor/vosk-model/`
+- **FFmpeg**: Incluído em `vendor/ffmpeg/`
+
+## 🐛 Solução de Problemas
+
+### Erro: "CUDA out of memory"
+- Use modelos menores (`whisper_tiny`, `whisper_base`)
+- Processe arquivos menores
+- Verifique se outros apps estão usando GPU
+
+### Erro: "Model not found"
+- Verifique conexão com internet (para download automático do Whisper)
+- Para Vosk, confirme que o modelo está em `vendor/vosk-model/`
+
+### Erro: "FFmpeg not found"
+- Verifique se a pasta `vendor/ffmpeg/` existe
+- Reinicie a aplicação após instalar FFmpeg
+
+## 📈 Benefícios da Implementação
+- ✅ Flexibilidade: escolha entre 6 modelos
+- ✅ Desempenho otimizado: GPU para Whisper, CPU para Vosk
+- ✅ Interface única: tudo na mesma aplicação
+- ✅ Arquitetura escalável: fácil adição de novos modelos
+
+## 📝 Notas Importantes
+1. **Primeira execução**: modelos do Whisper são baixados automaticamente (até 2.9GB)
+2. **Progresso**: 
+   - Vosk mostra progresso real
+   - Whisper usa progresso simulado
+3. **Memória**: modelos maiores exigem mais RAM/VRAM
+4. **Internet**: necessária apenas para download inicial dos modelos Whisper
+
+## 📁 Estrutura do Projeto
+```
+RECONHECIMENTO_DE_FALA_PARA_TEXTO/
+├── app/
+│   ├── __init__.py
+│   ├── routes.py          # Controladores Flask
+│   └── transcriber.py     # Lógica de transcrição
+├── vendor/
+│   ├── ffmpeg/            # Binários FFmpeg
+│   └── vosk-model/        # Modelo Vosk (português)
+├── install_whisper_vosk.py # Script de instalação
+├── run.py                 # Ponto de entrada
+└── README.md
+```
+
+## 🎉 Conclusão
+O sistema agora oferece **flexibilidade profissional**, permitindo que usuários escolham entre diferentes motores de reconhecimento de fala com base em suas necessidades específicas. A interface permanece intuitiva, enquanto a arquitetura é robusta e facilmente extensível.
 ```

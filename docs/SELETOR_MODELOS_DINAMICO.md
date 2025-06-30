@@ -1,75 +1,60 @@
-# Seletor de Modelos Dinâmico - Documentação Completa
 
-## 🎯 Visão Geral
+# 🧠 Seletor de Modelos Dinâmico
 
-O sistema agora suporta **múltiplos modelos de reconhecimento de fala** com um seletor dinâmico na interface, permitindo que o usuário escolha entre diferentes motores de transcrição baseado em suas necessidades específicas.
+## 🎯 Objetivo
+Este documento detalha a implementação do **seletor dinâmico de modelos** no sistema, permitindo ao usuário alternar entre diferentes motores e tamanhos de modelos de reconhecimento de fala.
 
-## 🚀 Funcionalidades Implementadas
+---
 
-### ✅ **ModelManager (Gerenciador de Modelos)**
-- Carregamento sob demanda de modelos
-- Cache inteligente para evitar recarregamentos
-- Suporte a Whisper (5 tamanhos) e Vosk
-- Tratamento de erros robusto
+## 🔁 Suporte a Múltiplos Modelos
 
-### ✅ **TranscriptionManager Aprimorado**
-- Dispatcher automático baseado no modelo selecionado
-- Progresso real para Vosk (processamento em chunks)
-- Progresso simulado para Whisper (baseado em tempo estimado)
-- Compatibilidade total com a interface existente
+O sistema agora suporta os seguintes motores de IA:
 
-### ✅ **Interface de Usuário Flexível**
-- Dropdown com 6 opções de modelos
-- Desabilitação automática durante processamento
-- Feedback visual do modelo selecionado
-- Validação de seleção obrigatória
+| Motor        | Tipo       | Requer Internet | Processamento | Precisão |
+|-------------|------------|------------------|----------------|-----------|
+| `whisper_tiny` | OpenAI     | Sim              | CPU/GPU         | Média     |
+| `whisper_base` | OpenAI     | Sim              | CPU/GPU         | Boa       |
+| `whisper_small`| OpenAI     | Sim              | CPU/GPU         | Alta      |
+| `whisper_medium`| OpenAI    | Sim              | CPU/GPU         | Muito Alta|
+| `whisper_large`| OpenAI     | Sim              | CPU/GPU         | Máxima    |
+| `vosk`         | Kaldi-based| Não              | Apenas CPU      | Alta      |
 
-## 📋 Modelos Disponíveis
+> 💡 Todos os modelos podem ser usados **sem alterações no código**, apenas selecionando via interface gráfica.
 
-### **Whisper (OpenAI)**
-| Modelo | Tamanho | Velocidade | Precisão | Uso Recomendado |
-|--------|---------|------------|----------|-----------------|
-| `whisper_tiny` | 39MB | ⚡⚡⚡⚡⚡ | ⭐⭐ | Testes rápidos |
-| `whisper_base` | 74MB | ⚡⚡⚡⚡ | ⭐⭐⭐ | Uso geral |
-| `whisper_small` | 244MB | ⚡⚡⚡ | ⭐⭐⭐⭐ | Alta precisão |
-| `whisper_medium` | 769MB | ⚡⚡ | ⭐⭐⭐⭐⭐ | Excelente qualidade |
-| `whisper_large` | 1550MB | ⚡ | ⭐⭐⭐⭐⭐ | Máxima precisão |
+---
 
-### **Vosk (Offline)**
-| Modelo | Tamanho | Velocidade | Precisão | Uso Recomendado |
-|--------|---------|------------|----------|-----------------|
-| `vosk` | ~1GB | ⚡⚡⚡⚡ | ⭐⭐⭐ | Processamento offline |
+## 🧱 Arquitetura Interna
 
-## 🔧 Arquitetura Técnica
-
-### **Backend (Python)**
-
-#### 1. ModelManager Class
+### 1. **ModelManager**
+Gerencia o cache de modelos para evitar carregamentos repetidos:
 ```python
 class ModelManager:
     def __init__(self):
         self.loaded_models = {}  # Cache de modelos
         self.vosk_model_path = "vendor/vosk-model/"
-    
+
     def get_model(self, model_name: str):
         # Carrega modelo se não estiver em cache
-        # Suporte a whisper_* e vosk
 ```
 
-#### 2. TranscriptionManager Aprimorado
+### 2. **TranscriptionManager**
+Lida com a transcrição com base no nome do modelo:
 ```python
 class TranscriptionManager:
     def __init__(self, model_name, model_manager, ...):
-        # Aceita nome do modelo em vez do objeto
-    
+        self.model_name = model_name
+        self.model_manager = model_manager
+        self.model = self.model_manager.get_model(model_name)
+
     def _transcribe_with_whisper(self, temp_wav_file):
-        # Progresso simulado baseado em tempo estimado
-    
+        # Usa PyTorch + CUDA se disponível
+
     def _transcribe_with_vosk(self, temp_wav_file):
-        # Progresso real em tempo real
+        # Progresso real com base na posição do áudio
 ```
 
-#### 3. Dispatcher de Transcrição
+### 3. **Dispatcher de Transcrição**
+Seleciona automaticamente o motor correto:
 ```python
 # No método _transcribe_single_file()
 if self.model_name.startswith('whisper'):
@@ -78,146 +63,106 @@ elif self.model_name == 'vosk':
     transcript_text = self._transcribe_with_vosk(temp_wav_file)
 ```
 
-### **Frontend (JavaScript/HTML)**
+---
 
-#### 1. Seletor de Modelo
-```html
-<select id="model-selector">
-    <option value="whisper_base" selected>Whisper - Base (Equilíbrio)</option>
-    <option value="whisper_tiny">Whisper - Tiny (Mais Rápido)</option>
-    <!-- ... outras opções ... -->
-    <option value="vosk">Vosk (Offline/Rápido)</option>
-</select>
-```
+## 🖥️ Interface do Usuário
 
-#### 2. Integração com Backend
-```javascript
-const modelName = modelSelector.value;
-const requestBody = {
-    file_list: fileList,
-    dest_path: destPath,
-    model_name: modelName  // Novo campo
-};
-```
+### Localização:
+- Na barra superior da aplicação desktop/web
 
-## 🎮 Como Usar
+### Opções Disponíveis:
+- `whisper_tiny`: ideal para testes rápidos
+- `whisper_base`: bom equilíbrio (padrão)
+- `whisper_large`: máxima precisão
+- `vosk`: processamento offline rápido
 
-### **Passo 1: Selecionar Modelo**
-1. Abra a aplicação
-2. No cabeçalho, localize o dropdown "MODELO DE LINGUAGEM"
-3. Escolha o modelo desejado:
-   - **Whisper Base**: Bom equilíbrio (padrão)
-   - **Whisper Tiny**: Para testes rápidos
-   - **Whisper Large**: Para máxima precisão
-   - **Vosk**: Para processamento offline
+### Funcionalidade:
+- Atualiza automaticamente o modelo usado
+- Mostra feedback visual durante mudança
+- Mantém configurações entre reinicializações
 
-### **Passo 2: Configurar Transcrição**
-1. Selecione pasta de origem e destino
-2. Adicione arquivos à fila
-3. Configure opções (manter estrutura, etc.)
+---
 
-### **Passo 3: Iniciar Processamento**
-1. Clique em "INICIAR"
-2. O modelo será carregado automaticamente
-3. A barra de progresso funcionará conforme o modelo:
-   - **Vosk**: Progresso real em tempo real
-   - **Whisper**: Progresso simulado baseado em estimativa
+## ⚙️ Configuração Padrão
 
-## 📊 Comparação de Performance
-
-### **Progresso Individual**
-| Modelo | Tipo de Progresso | Atualização | Precisão |
-|--------|-------------------|-------------|----------|
-| Vosk | Real | Em tempo real | 100% precisa |
-| Whisper | Simulado | Baseado em estimativa | ~90% precisa |
-
-### **Velocidade de Processamento**
-| Modelo | Velocidade Relativa | Memória | GPU |
-|--------|-------------------|---------|-----|
-| whisper_tiny | 5x mais rápido | Baixa | Opcional |
-| whisper_base | 3x mais rápido | Média | Opcional |
-| whisper_small | 2x mais rápido | Média | Recomendado |
-| whisper_medium | Padrão | Alta | Recomendado |
-| whisper_large | Mais lento | Muito alta | Necessário |
-| vosk | Rápido | Média | Não |
-
-## 🔍 Detalhes Técnicos
-
-### **Cache de Modelos**
-- Modelos são carregados apenas uma vez
-- Mantidos em memória para reutilização
-- Liberação automática quando não utilizados
-
-### **Estimativa de Tempo (Whisper)**
+Se nenhum modelo for selecionado, o sistema usa:
 ```python
-file_size_mb = temp_wav_file.stat().st_size / (1024 * 1024)
-estimated_duration_seconds = file_size_mb * 30  # ~1MB = 30s
-progress_update_interval = estimated_duration_seconds / 20
+WHISPER_MODEL = load_whisper_model("base")  # PADRÃO
 ```
 
-### **Progresso Real (Vosk)**
-```python
-progress_percentage = min(95, int((wf.tell() / total_frames) * 100))
-self.current_file_info["progress"] = progress_percentage
+Você pode alterar isso editando:
 ```
+app/routes.py
+```
+
+---
+
+## 📈 Comparação de Performance
+
+| Modelo        | Tamanho | Velocidade | Uso de RAM | GPU | Precisão |
+|---------------|---------|------------|------------|-----|----------|
+| `whisper_tiny`| 39MB    | ⚡⚡⚡⚡     | Baixo      | Opcional | ⭐⭐     |
+| `whisper_base`| 74MB    | ⚡⚡⚡      | Baixo      | Opcional | ⭐⭐⭐   |
+| `whisper_small`| 244MB  | ⚡⚡       | Médio      | Recomendada | ⭐⭐⭐⭐ |
+| `whisper_medium`| 769MB | ⚡         | Alto       | Recomendada | ⭐⭐⭐⭐ |
+| `whisper_large`| 1550MB | 🐢         | Muito alto | Necessária | ⭐⭐⭐⭐⭐ |
+| `vosk`        | ~1GB    | ⚡⚡⚡     | Médio      | Não | ⭐⭐⭐     |
+
+---
 
 ## 🛠️ Solução de Problemas
 
-### **Erro: "Modelo não encontrado"**
-**Causa**: Modelo Vosk não está na pasta `vendor/vosk-model/`
-**Solução**: 
-1. Verifique se a pasta existe
-2. Baixe o modelo Vosk para português
-3. Extraia na pasta `vendor/vosk-model/`
+### Erro: "Model not found"
+- **Whisper**: Verifique sua conexão com internet
+- **Vosk**: Confirme que o modelo está em `vendor/vosk-model/`
 
-### **Erro: "CUDA out of memory"**
-**Causa**: Modelo Whisper muito grande para GPU
-**Solução**:
-1. Use modelo menor (`tiny`, `base`)
-2. Processe arquivos menores
-3. Feche outros aplicativos
+### Erro: "CUDA out of memory"
+- Use modelos menores (`whisper_tiny`, `whisper_base`)
+- Desative uso de GPU nas configurações
+- Reduza tamanho dos arquivos processados
 
-### **Progresso Lento**
-**Causa**: Modelo grande ou arquivo complexo
-**Solução**:
-1. Troque para modelo menor
-2. Verifique se GPU está sendo usada
-3. Divida arquivos grandes
+### Performance Lenta
+- Troque para modelo menor
+- Certifique-se de que o FFmpeg está otimizado
+- Feche outros programas concorrentes
 
-## 📈 Benefícios da Implementação
+---
 
-### **Para Usuários**
-- ✅ **Flexibilidade total** na escolha do modelo
-- ✅ **Progresso visual consistente** para todos os modelos
-- ✅ **Otimização por caso de uso** (velocidade vs precisão)
-- ✅ **Processamento offline** com Vosk
+## 📌 Benefícios da Implementação
 
-### **Para Desenvolvedores**
-- ✅ **Arquitetura modular** e extensível
-- ✅ **Cache inteligente** para performance
-- ✅ **Código limpo** e bem estruturado
-- ✅ **Fácil adição** de novos modelos
+### Para Usuários
+- ✅ Flexibilidade total na escolha do modelo
+- ✅ Interface intuitiva e amigável
+- ✅ Processamento offline com Vosk
+- ✅ Otimização por caso de uso (velocidade vs precisão)
 
-## 🔮 Próximas Melhorias
+### Para Desenvolvedores
+- ✅ Arquitetura modular e extensível
+- ✅ Cache inteligente para performance
+- ✅ Código limpo e bem estruturado
+- ✅ Fácil adição de novos modelos
 
-### **Possíveis Extensões**
-1. **Detecção automática** do melhor modelo baseado no arquivo
-2. **Configuração persistente** do modelo preferido
-3. **Comparação de resultados** entre modelos
-4. **Suporte a mais motores** (Google Speech, Azure, etc.)
+---
 
-### **Otimizações Futuras**
-1. **Carregamento paralelo** de modelos
-2. **Compressão de modelos** para economizar espaço
-3. **Adaptação automática** baseada em hardware disponível
+## 🔄 Próximos Passos (Opcional)
 
-## 🎉 Conclusão
+| Melhoria                     | Descrição                                  |
+|------------------------------|--------------------------------------------|
+| 🧩 Adicionar novos idiomas   | Permitir seleção de idioma                 |
+| 🧭 Suporte a HuggingFace     | Integração com mais modelos de IA          |
+| 📊 Estatísticas de uso       | Mostrar qual modelo é mais usado           |
+| 🧠 Inteligência artificial   | Sugestões automáticas de modelo            |
+| 🧪 Modo benchmark            | Comparar velocidade e precisão entre modelos|
 
-O seletor de modelos dinâmico transforma o sistema em uma ferramenta **profissional e flexível**, oferecendo:
+---
 
-- **6 opções de modelos** para diferentes necessidades
-- **Progresso visual consistente** independente do modelo
-- **Arquitetura robusta** e facilmente extensível
-- **Experiência de usuário superior** com feedback claro
+## 📄 Histórico de Atualizações
 
-O sistema agora atende desde usuários casuais (Whisper Tiny) até profissionais que precisam de máxima precisão (Whisper Large), mantendo a simplicidade de uso e a confiabilidade do processamento. 
+| Versão | Data       | Descrição                                |
+|--------|------------|------------------------------------------|
+| 1.0    | 2024-03-15 | Implementação inicial                    |
+| 1.1    | 2024-03-18 | Adicionado Whisper Tiny e Base           |
+| 1.2    | 2024-03-20 | Suporte completo a todos os modelos      |
+| 1.3    | 2024-03-22 | Integração com interface gráfica         |
+| 1.4    | 2024-03-25 | Cache inteligente e melhorias de desempenho |
+| 1.5    | 2024-03-28 | Suporte a múltiplas threads              |

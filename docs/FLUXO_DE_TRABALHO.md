@@ -157,7 +157,7 @@ Com a ponte de comunicação entre Python e JavaScript estabelecida na Fase 5, a
      * open_file_dialog(): Abre um seletor de arquivos (permitindo múltiplos) e retorna uma lista com os caminhos dos arquivos selecionados.
      * open_folder_in_explorer(path): Recebe um caminho e abre o explorador de arquivos do sistema nesse local.
 
- * [ ] **2. Conexão do Front-End com a API Híbrida e Lógica da Interface**
+ * [x] **2. Conexão do Front-End com a API Híbrida e Lógica da Interface**
    * [x] Seleção de Origem/Destino:
      * [x] Adicionar botões "Selecionar Pasta" ao lado dos campos de Origem e Destino no index.html.
      * [x] Em main.js, fazer esses botões chamarem window.pywebview.api.open_folder_dialog().
@@ -165,10 +165,10 @@ Com a ponte de comunicação entre Python e JavaScript estabelecida na Fase 5, a
    * [x] Botão "+ Adicionar Arquivo":
      * [x] Conectar o botão para que ele chame window.pywebview.api.open_file_dialog().
      * [x] Para cada arquivo retornado pela API, criar dinamicamente um novo item na lista "Arquivos para Processar" usando a função addFileToQueue.
-   * [ ] Escaneamento de Pasta de Origem (Funcionalidade Adicionada):
-     * [ ] Back-end: Criar uma nova função em app/api.py (ex: scan_folder_recursively(path)) que recebe um caminho de pasta, usa os.walk para encontrar todos os arquivos de mídia compatíveis e retorna uma lista com os caminhos completos.
-     * [ ] Front-end: Em main.js, no addEventListener do botão select-origem-btn, após obter o caminho da pasta, chamar a nova função da API (await api.scan_folder_recursively(...)).
-     * [ ] Front-end: Em main.js, pegar a lista de arquivos retornada pelo Python e usar um loop para chamar a função addFileToQueue(filePath) para cada arquivo, populando a interface.
+   * [x] Escaneamento de Pasta de Origem (Funcionalidade Adicionada):
+     * [x] Back-end: Criar uma nova função em app/api.py (ex: scan_folder_recursively(path)) que recebe um caminho de pasta, usa os.walk para encontrar todos os arquivos de mídia compatíveis e retorna uma lista com os caminhos completos.
+     * [x] Front-end: Em main.js, no addEventListener do botão select-origem-btn, após obter o caminho da pasta, chamar a nova função da API (await api.scan_folder_recursively(...)).
+     * [x] Front-end: Em main.js, pegar a lista de arquivos retornada pelo Python e usar um loop para chamar a função addFileToQueue(filePath) para cada arquivo, populando a interface.
    * [x] Lógica de Início Modificada:
      * [x] Alterar a função do botão "INICIAR TRANSCRIÇÃO" para que o front-end colete os caminhos da lista e os envie para o back-end.
      * [x] Modificar a rota /start-processing em routes.py para receber uma file_list explícita.
@@ -179,38 +179,6 @@ Com a ponte de comunicação entre Python e JavaScript estabelecida na Fase 5, a
      * [x] Fazer esta opção chamar window.pywebview.api.open_folder_in_explorer(path).
      * [x] O path a ser aberto deve ser extraído do item da lista.
 
- * [ ] **4. Controles de Processo e Limpeza**
-   * [ ] Botão "PARAR PROCESSO": Conectar o botão para fazer um fetch a uma nova rota /stop-processing para interromper o trabalho em andamento no back-end.
+ * [x] **4. Controles de Processo e Limpeza**
+   * [x] Botão "PARAR PROCESSO": Conectar o botão para fazer um fetch a uma nova rota /stop-processing para interromper o trabalho em andamento no back-end.
    * [x] Botões "Limpar Fila" e "Limpar Concluídos": Implementar a lógica em main.js para limpar o conteúdo das listas da interface.
-
----
-
-### **Fase 7: Documentação e Finalização**
-
-[cite_start]Esta fase final garante que o projeto seja compreensível, fácil de instalar, usar e manter. [cite: 191]
-
-#### **Checklist da Fase 7**
-
-* [ ] **1. Documentação para o Usuário (`README.md`)**
-    * [cite_start][ ] Atualizar as "Instruções de Instalação" para incluir `pywebview` e outras possíveis dependências do sistema operacional. [cite: 191]
-    * [ ] Reescrever a seção "Como Instalar e Rodar", explicando que agora se executa `run.py` para abrir uma aplicação de desktop.
-    * [ ] Detalhar todas as novas funcionalidades interativas: como selecionar pastas, adicionar arquivos avulsos, usar o menu de contexto, etc.
-    * [ ] Adicionar screenshots da aplicação final em funcionamento.
-
-* [ ] **2. Documentação Técnica (`docs/`)**
-    * [cite_start][ ] **Atualizar `ARQUITETURA.md`:** [cite: 192]
-        * Adicionar uma nova seção descrevendo a "Ponte de Interação (API Híbrida)", explicando o papel do `pywebview` e do arquivo `app/api.py`.
-        * [cite_start]Revisar as responsabilidades do Front-end e Back-end para refletir a nova arquitetura. [cite: 98]
-    * [ ] **Criar `HYBRID_API.md`:**
-        * Criar um novo documento para detalhar a API da ponte de interação.
-        * Listar cada função em `app/api.py`, seus parâmetros e o que ela retorna para o JavaScript (ex: `open_file_dialog() -> list[str]`).
-    * [cite_start][ ] **Atualizar `FLUXO_DE_TRABALHO.md`:** [cite: 192]
-        * Revisar os fluxos de trabalho do usuário para incorporar o uso dos novos botões de seleção de arquivos/pastas e as ações do menu de contexto.
-    * [cite_start][ ] **Finalizar `DIARIO_DE_DESENVOLVIMENTO.md`:** [cite: 122]
-        * Marcar as Fases 5, 6 e 7 como "Concluídas", resumindo as realizações de cada uma.
-
-* [ ] **3. Limpeza e Revisão Final do Código**
-    * [cite_start][ ] Remover `console.log` e `print()` de depuração que não são mais necessários. [cite: 193]
-    * [cite_start][ ] Adicionar comentários ao código em partes complexas, especialmente em `run.py`, `app/api.py` e na lógica de `main.js` que lida com as chamadas da API híbrida. [cite: 193]
-    * [ ] Garantir que o código esteja formatado de forma limpa e consistente.
-    * [ ] Verificar se o arquivo `.gitignore` está configurado corretamente para ignorar arquivos de cache do Python (ex: `__pycache__/`).
