@@ -1,5 +1,6 @@
 Flask>=2.0
 openai-whisper>=20231117
 torch>=2.0.0
-pywebview>=4.0 
+pywebview>=4.0
+vosk>=0.3.45
 # Adicionamos pywebview para criar a janela de desktop híbrida

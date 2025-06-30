@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const addFileBtn = document.getElementById('add-file-btn');
         const clearQueueBtn = document.getElementById('clear-queue-btn');
         const clearCompletedBtn = document.getElementById('clear-completed-btn');
+        const modelSelector = document.getElementById('model-selector');
         
         const queueList = document.getElementById('queue-list');
         const completedList = document.getElementById('completed-list');
@@ -141,6 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     if (data.status === 'completed' || data.status === 'stopped') {
                         clearInterval(progressInterval);
                         isProcessing = false;
+                        modelSelector.disabled = false;
                         
                         if(data.status === 'completed') {
                             progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
@@ -155,6 +157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     console.error("Erro ao buscar progresso:", error);
                     clearInterval(progressInterval);
                     isProcessing = false;
+                    modelSelector.disabled = false;
                 });
         }
 
@@ -235,13 +238,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const fileList = Array.from(fileItems).map(item => item.dataset.filepath);
+            const modelName = modelSelector.value;
+            if (!modelName) {
+                alert('Por favor, selecione um modelo de linguagem.');
+                return;
+            }
 
+            const fileList = Array.from(fileItems).map(item => item.dataset.filepath);
             const requestBody = {
                 file_list: fileList,
                 dest_path: destPath,
                 keep_structure: keepStructure,
-                source_path: sourcePath 
+                source_path: sourcePath,
+                model_name: modelName
             };
 
             fetch('/start-processing', {
@@ -253,6 +262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .then(data => {
                 if (data.status === 'sucesso') {
                     isProcessing = true;
+                    modelSelector.disabled = true;
                     progressInterval = setInterval(updateProgress, 1000);
                 } else {
                     alert(`Erro ao iniciar processo: ${data.message}`);

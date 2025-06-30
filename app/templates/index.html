@@ -28,6 +28,17 @@
                 <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
             </div>
         </div>
+        <div>
+            <label for="model-selector" class="text-xs font-semibold text-gray-500 uppercase mb-1">MODELO DE LINGUAGEM</label>
+            <select id="model-selector" class="w-64 md:w-72 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-md">
+                <option value="whisper_base" selected>Whisper - Base (Equilíbrio)</option>
+                <option value="whisper_tiny">Whisper - Tiny (Mais Rápido)</option>
+                <option value="whisper_small">Whisper - Small (Preciso)</option>
+                <option value="whisper_medium">Whisper - Medium (Muito Preciso)</option>
+                <option value="whisper_large">Whisper - Large (Máxima Precisão)</option>
+                <option value="vosk">Vosk (Offline/Rápido)</option>
+            </select>
+        </div>
         <div class="flex items-center pt-5">
             <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
             <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">

@@ -2,12 +2,10 @@
 from app import app
 from flask import render_template, request, jsonify
 import threading
-from .transcriber import TranscriptionManager, load_whisper_model
+from .transcriber import TranscriptionManager, ModelManager
 
-print("Carregando o modelo Whisper na inicialização...")
-WHISPER_MODEL = load_whisper_model("base")
-print("Modelo carregado e pronto." if WHISPER_MODEL else "ERRO: Modelo não pôde ser carregado.")
-
+# Crie uma instância única do gerenciador de modelos
+model_manager = ModelManager()
 transcription_job = None
 
 @app.route('/')
@@ -20,10 +18,11 @@ def start_processing():
     data = request.get_json()
     file_list = data.get('file_list')
     dest_path = data.get('dest_path')
-
-    # [MODIFICADO] Recebendo os novos parâmetros
-    keep_structure = data.get('keep_structure', False) # Default para False se não for enviado
+    keep_structure = data.get('keep_structure', False)
     source_path = data.get('source_path', None)
+    
+    # NOVO: Recebe o nome do modelo do front-end
+    model_name = data.get('model_name', 'whisper_base') # Padrão para 'whisper_base'
 
     if not file_list or not dest_path:
         return jsonify({'status': 'erro', 'message': 'Lista de arquivos ou caminho de destino não fornecidos.'}), 400
@@ -31,15 +30,13 @@ def start_processing():
     # [NOVO] Validação no back-end
     if keep_structure and not source_path:
         return jsonify({'status': 'erro', 'message': 'Pasta de origem não fornecida para manter a estrutura.'}), 400
-        
-    if not WHISPER_MODEL:
-        return jsonify({'status': 'erro', 'message': 'Modelo Whisper não carregado.'}), 500
 
-    # [MODIFICADO] Passando os novos parâmetros para o TranscriptionManager
+    # MODIFICADO: Passe o model_name e o model_manager para o TranscriptionManager
     transcription_job = TranscriptionManager(
-        dest_path=dest_path, 
-        model=WHISPER_MODEL,
+        dest_path=dest_path,
+        model_name=model_name,
         file_list=file_list,
+        model_manager=model_manager,
         keep_structure=keep_structure,
         source_path=source_path
     )
@@ -48,7 +45,7 @@ def start_processing():
 
     return jsonify({
         'status': 'sucesso',
-        'message': 'Processo iniciado.'
+        'message': f'Processo iniciado com o modelo {model_name}.'
     })
 
 @app.route('/stop-processing', methods=['POST'])
