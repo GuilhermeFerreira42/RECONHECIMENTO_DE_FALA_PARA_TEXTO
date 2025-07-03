@@ -97,15 +97,16 @@ goto menu
 cls
 echo Outras opcoes
 echo ========================================================
-echo 1. Restaurar arquivos deletados (git checkout -- .)
-echo 2. Sincronizar com repositorio (git fetch origin)
-echo 3. Fazer fetch do repositorio (git fetch)
-echo 4. Fazer merge de branches (git merge <branch>)
-echo 5. Inicializar um novo repositorio (git init)
-echo 6. Desfazer alteracoes (git reset)
-echo 7. Descartar todas as alteracoes (git checkout .)
-echo 8. Listar branches (git branch)
-echo 9. Voltar ao menu principal
+echo 1. Restaurar arquivos deletados (git checkout -- .) 
+echo 2. Sincronizar com repositorio (git fetch origin) 
+echo 3. Fazer fetch do repositorio (git fetch) 
+echo 4. Fazer merge de branches (git merge <branch>) 
+echo 5. Inicializar um novo repositorio (git init) 
+echo 6. Desfazer alteracoes (git reset) 
+echo 7. Descartar todas as alteracoes (git checkout .) 
+echo 8. Listar branches (git branch) 
+echo 9. Gerenciamento de Usuario
+echo 0. Voltar ao menu principal
 echo ========================================================
 set /p escolha_outras="Escolha uma opcao: "
 
@@ -117,12 +118,13 @@ if %escolha_outras%==5 goto init
 if %escolha_outras%==6 goto reset
 if %escolha_outras%==7 goto descartar
 if %escolha_outras%==8 goto branch
-if %escolha_outras%==9 goto menu
+if %escolha_outras%==9 goto usuario_menu
+if %escolha_outras%==0 goto menu
 goto outras_opcoes
 
 :restaurar
 echo Restaurando arquivos deletados...
-git checkout -- .
+git checkout -- . 
 pause
 goto outras_opcoes
 
@@ -147,7 +149,7 @@ goto outras_opcoes
 
 :init
 echo Inicializando um novo repositorio...
-git init
+git init 
 pause
 goto outras_opcoes
 
@@ -160,7 +162,7 @@ goto outras_opcoes
 
 :descartar
 echo Descartando todas as alteracoes locais...
-git checkout .
+git checkout . [cite: 7]
 pause
 goto outras_opcoes
 
@@ -170,6 +172,47 @@ git branch -a
 pause
 goto outras_opcoes
 
-:fim
-echo Saindo...
+:usuario_menu
+cls
+echo =====================================
+echo      GERENCIAMENTO DE USUARIO
+echo =====================================
+echo 1. Fazer Login (configurar usuario)
+echo 2. Ver Usuario Logado
+echo 3. Sair (remover configuracao de usuario)
+echo 4. Voltar para Outras Opcoes
+echo =====================================
+set /p escolha_usuario="Escolha uma opcao: "
+
+if %escolha_usuario%==1 goto login
+if %escolha_usuario%==2 goto ver_usuario
+if %escolha_usuario%==3 goto logout
+if %escolha_usuario%==4 goto outras_opcoes
+goto usuario_menu
+
+:login
+echo Configurando novo usuario...
+set /p user_name="Digite seu nome de usuario do GitHub: "
+set /p user_email="Digite seu email do GitHub: "
+git config user.name "%user_name%"
+git config user.email "%user_email%"
+echo Usuario "%user_name%" configurado com sucesso!
 pause
+goto usuario_menu
+
+:ver_usuario
+echo Verificando usuario configurado...
+echo - Usuario:
+git config user.name
+echo - Email:
+git config user.email
+pause
+goto usuario_menu
+
+:logout
+echo Removendo configuracao de usuario...
+git config --unset user.name
+git config --unset user.email
+echo Configuracao de usuario removida.
+pause
+goto usuario_menu

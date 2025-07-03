@@ -95,6 +95,7 @@ class TranscriptionManager:
         self.stop_requested = False
         self.keep_structure = keep_structure
         self.source_path = Path(source_path) if source_path else None
+        self.newly_completed_files = []
 
     def request_stop(self):
         print("[AVISO] Solicitação de parada recebida.")
@@ -252,6 +253,10 @@ class TranscriptionManager:
             with open(output_txt_path_obj, 'w', encoding='utf-8') as f:
                 f.write(transcript_text)
             print(f"    -> Salvo em: {output_txt_path_obj}")
+            self.newly_completed_files.append({
+                "source_path": file_path_str,
+                "output_path": str(output_txt_path_obj)
+            })
         else:
             print(f"    -> Nenhuma transcrição gerada ou processo interrompido. Arquivo de texto não foi salvo.")
 
@@ -311,10 +316,14 @@ class TranscriptionManager:
             print("="*50)
 
     def get_status(self):
+        completed_list = self.newly_completed_files
+        self.newly_completed_files = []
+
         return {
             "status": self.status,
             "progress_general": self.progress_general,
             "total_files": self.total_files,
             "files_processed": self.files_processed_count,
-            "current_file": self.current_file_info
+            "current_file": self.current_file_info,
+            "completed_files": completed_list
         }

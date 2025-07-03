@@ -45,7 +45,7 @@ if __name__ == '__main__':
             'Painel de Transcrição',
             'http://127.0.0.1:5000',
             js_api=api,
-            min_size=(1024, 768)
+            min_size=(300, 300)
         )
         webview.start(debug=True)
     else:

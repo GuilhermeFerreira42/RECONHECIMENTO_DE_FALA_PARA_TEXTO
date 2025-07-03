@@ -75,25 +75,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             queueList.appendChild(li);
         }
 
-        function moveItemToCompleted(filePath) {
-            const normalizedPath = filePath.replace(/\\/g, '/');
-            const itemToMove = document.querySelector(`#queue-list li[data-filepath="${normalizedPath}"]`);
-            
+        function moveItemToCompleted(itemToMove, correctOutputPath) {
             if (itemToMove) {
                 const fileName = itemToMove.dataset.filename;
-                itemToMove.remove();
-                
                 const completedFilename = fileName.replace(/\.[^/.]+$/, ".txt");
+                itemToMove.remove();
                 const li = document.createElement('li');
                 li.className = 'group relative flex items-center gap-3 px-5 py-3 hover:bg-gray-100 transition-colors';
-                const destinationPath = (destinoInput.value.replace(/\\/g, '/') + '/' + completedFilename);
-                li.setAttribute('data-filepath', destinationPath);
+                li.setAttribute('data-filepath', correctOutputPath); 
                 li.setAttribute('data-filename', completedFilename);
-                
                 li.innerHTML = `
                     <i class="fas fa-file-alt text-green-600 text-xl"></i>
                     <div class="flex-1 min-w-0">
-                        <p class="text-gray-900 font-medium truncate" title="${destinationPath}">${completedFilename}</p>
+                        <p class="text-gray-900 font-medium truncate" title="${correctOutputPath}">${completedFilename}</p>
                         <p class="text-gray-500 text-xs">Concluído com sucesso</p>
                     </div>
                     <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
@@ -116,20 +110,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const currentFileName = data.current_file.filename || '...';
                     progressTextGeneral.textContent = `Geral: ${data.progress_general}% (${data.files_processed}/${data.total_files}) | Processando: ${currentFileName}`;
                     
+                    if (data.completed_files && data.completed_files.length > 0) {
+                        data.completed_files.forEach(fileInfo => {
+                            const normalizedSourcePath = fileInfo.source_path.replace(/\\/g, '/');
+                            const itemToMove = document.querySelector(`#queue-list li[data-filepath="${normalizedSourcePath}"]`);
+                            moveItemToCompleted(itemToMove, fileInfo.output_path);
+                        });
+                    }
+
                     if (data.status === 'running' && data.current_file.full_path) {
                         const normalizedPath = data.current_file.full_path.replace(/\\/g, '/');
                         const currentItem = document.querySelector(`#queue-list li[data-filepath="${normalizedPath}"]`);
-                        
                         if (currentItem) {
                             const statusP = currentItem.querySelector('.status-text');
                             const individualProgress = currentItem.querySelector('.individual-progress');
-                            
-                            let previousSibling = currentItem.previousElementSibling;
-                            while(previousSibling) {
-                                moveItemToCompleted(previousSibling.dataset.filepath);
-                                previousSibling = currentItem.previousElementSibling;
-                            }
-
                             if (typeof data.current_file.progress === 'number') {
                                 statusP.textContent = `Transcrevendo... ${data.current_file.progress}%`;
                                 statusP.className = 'text-blue-600 text-sm status-text';
@@ -143,11 +137,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                         clearInterval(progressInterval);
                         isProcessing = false;
                         modelSelector.disabled = false;
-                        
                         if(data.status === 'completed') {
                             progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
-                            const remainingItems = queueList.querySelectorAll('li');
-                            remainingItems.forEach(item => moveItemToCompleted(item.dataset.filepath));
+                            queueList.innerHTML = '';
                         } else { 
                             progressTextGeneral.textContent = `Processo interrompido pelo usuário. ${data.files_processed} de ${data.total_files} arquivos foram concluídos.`;
                         }
