@@ -108,9 +108,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     progressBarGeneral.style.width = `${data.progress_general}%`;
                     const currentFileName = data.current_file.filename || '...';
-                    const generalProgressText = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Tempo Decorrido: ${data.batch_elapsed_str}`;
-                    progressTextGeneral.textContent = (data.status === 'running') ? `${generalProgressText} | Processando: ${currentFileName}` : generalProgressText;
                     
+                    let generalProgressText = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+                    // Adiciona o tempo restante apenas se o processo estiver rodando
+                    if (data.status === 'running') {
+                        generalProgressText += ` | Restante: ${data.batch_eta_str}`;
+                        progressTextGeneral.textContent = `${generalProgressText} | Processando: ${currentFileName}`;
+                    } else {
+                        progressTextGeneral.textContent = generalProgressText;
+                    }
+
                     if (data.completed_files && data.completed_files.length > 0) {
                         data.completed_files.forEach(fileInfo => {
                             const normalizedSourcePath = fileInfo.source_path.replace(/\\/g, '/');

@@ -282,19 +282,31 @@ class TranscriptionManager:
         self.newly_completed_files = []
         progress_general = 0
         batch_elapsed_str = "00:00"
+        batch_eta_str = "Calculando..."  # NOVO: Valor padrão para o tempo restante
+
         if self.status == "running" and self.total_files > 0:
             progress_of_current_file = self.current_file_info.get("progress", 0) / 100.0
-            progress_general = ((self.files_processed_count + progress_of_current_file) / self.total_files) * 100
+            # Garante que o progresso não regrida visualmente quando um arquivo termina
+            if self.files_processed_count + progress_of_current_file > self.progress_general / 100:
+                self.progress_general = ((self.files_processed_count + progress_of_current_file) / self.total_files) * 100
+            progress_general = self.progress_general
             batch_elapsed_seconds = time.time() - self.batch_start_time
             batch_elapsed_str = self._format_time(batch_elapsed_seconds)
+            # NOVO: Lógica para estimar o tempo restante do lote
+            if progress_general > 1:  # Evita divisão por zero e estimativas irreais no início
+                total_estimated_time = (batch_elapsed_seconds / progress_general) * 100
+                eta_seconds = total_estimated_time - batch_elapsed_seconds
+                batch_eta_str = self._format_time(eta_seconds)
         elif self.status == "completed":
             progress_general = 100
+            batch_eta_str = "Concluído"
             if self.batch_start_time:
                 batch_elapsed_str = self._format_time(time.time() - self.batch_start_time)
         return {
             "status": self.status,
             "progress_general": progress_general,
             "batch_elapsed_str": batch_elapsed_str,
+            "batch_eta_str": batch_eta_str,  # NOVO CAMPO RETORNADO
             "total_files": self.total_files,
             "files_processed": self.files_processed_count,
             "current_file": self.current_file_info,
