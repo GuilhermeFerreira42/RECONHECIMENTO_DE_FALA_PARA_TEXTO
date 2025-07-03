@@ -108,7 +108,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     progressBarGeneral.style.width = `${data.progress_general}%`;
                     const currentFileName = data.current_file.filename || '...';
-                    progressTextGeneral.textContent = `Geral: ${data.progress_general}% (${data.files_processed}/${data.total_files}) | Processando: ${currentFileName}`;
+                    const generalProgressText = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Tempo Decorrido: ${data.batch_elapsed_str}`;
+                    progressTextGeneral.textContent = (data.status === 'running') ? `${generalProgressText} | Processando: ${currentFileName}` : generalProgressText;
                     
                     if (data.completed_files && data.completed_files.length > 0) {
                         data.completed_files.forEach(fileInfo => {
@@ -125,10 +126,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                             const statusP = currentItem.querySelector('.status-text');
                             const individualProgress = currentItem.querySelector('.individual-progress');
                             if (typeof data.current_file.progress === 'number') {
-                                statusP.textContent = `Transcrevendo... ${data.current_file.progress}%`;
+                                const { progress, elapsed_str, eta_str } = data.current_file;
+                                statusP.textContent = `Transcrevendo... ${progress}% | Tempo: ${elapsed_str} | Restante: ${eta_str}`;
                                 statusP.className = 'text-blue-600 text-sm status-text';
                                 individualProgress.parentElement.classList.add('bg-gray-200');
-                                individualProgress.style.width = `${data.current_file.progress}%`;
+                                individualProgress.style.width = `${progress}%`;
                             }
                         }
                     }
@@ -138,7 +140,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         isProcessing = false;
                         modelSelector.disabled = false;
                         if(data.status === 'completed') {
-                            progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                            progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados em ${data.batch_elapsed_str}.`;
                             queueList.innerHTML = '';
                         } else { 
                             progressTextGeneral.textContent = `Processo interrompido pelo usuário. ${data.files_processed} de ${data.total_files} arquivos foram concluídos.`;
