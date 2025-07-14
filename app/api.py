@@ -58,12 +58,15 @@ class Api:
         for root, _, files in os.walk(folder_path):
             for file in files:
                 if file.lower().endswith(SUPPORTED_EXTENSIONS):
-                    full_path = os.path.join(root, file)
-                    normalized_path = full_path.replace('\\', '/')
-                    media_files.append(normalized_path)
+                    full_path = os.path.join(root, file).replace('\\', '/')
+                    media_files.append(full_path)
         
         print(f"[API] Encontrados {len(media_files)} arquivos de mídia.")
         return media_files
+
+    def validate_path(self, path):
+        """Verifica se um caminho (arquivo ou pasta) é válido."""
+        return os.path.exists(path)
 
     # ANOTAÇÃO: Função atualizada para selecionar o arquivo no explorador.
     def open_folder_in_explorer(self, path):
