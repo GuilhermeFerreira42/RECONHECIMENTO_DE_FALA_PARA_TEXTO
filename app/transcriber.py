@@ -85,6 +85,7 @@ class TranscriptionManager:
         self.keep_structure = keep_structure
         self.source_path = Path(source_path) if source_path else None
         self.executor = None
+        self.pause_events = {}  # Pausa individual por arquivo
 
     def request_stop(self):
         print("[AVISO] Solicitação de parada recebida.")
@@ -113,6 +114,27 @@ class TranscriptionManager:
             # A mudança real acontece na recriação do executor, se a lógica permitir.
             # Para uma mudança em tempo real, seria necessário um gerenciamento de pool mais complexo.
             # Por agora, a configuração será usada na próxima inicialização.
+
+    def request_pause_file(self, file_path):
+        """Pausa apenas o arquivo especificado."""
+        if file_path not in self.pause_events:
+            self.pause_events[file_path] = threading.Event()
+        self.pause_events[file_path].clear()
+        with self.files_in_progress_lock:
+            if file_path in self.files_in_progress:
+                self.files_in_progress[file_path]['status'] = 'paused'
+
+    def request_resume_file(self, file_path):
+        """Retoma apenas o arquivo especificado."""
+        if file_path in self.pause_events:
+            self.pause_events[file_path].set()
+        with self.files_in_progress_lock:
+            if file_path in self.files_in_progress:
+                self.files_in_progress[file_path]['status'] = 'running'
+
+    def _wait_file_pause(self, file_path):
+        if file_path in self.pause_events:
+            self.pause_events[file_path].wait()
 
     def _format_time(self, seconds):
         if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
@@ -172,6 +194,7 @@ class TranscriptionManager:
             }
 
         self.pause_event.wait()
+        self._wait_file_pause(file_path_str)
         if self.stop_requested.is_set(): return None
 
         if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
@@ -187,6 +210,7 @@ class TranscriptionManager:
                 raise Exception("Falha na conversão")
 
             self.pause_event.wait()
+            self._wait_file_pause(file_path_str)
             if self.stop_requested.is_set(): return None
 
             transcript_text = None
@@ -214,6 +238,8 @@ class TranscriptionManager:
             with self.files_in_progress_lock:
                 if file_path_str in self.files_in_progress:
                     del self.files_in_progress[file_path_str]
+            if file_path_str in self.pause_events:
+                del self.pause_events[file_path_str]
 
     def run_transcription(self):
         self.model = self.model_manager.get_model(self.model_name)

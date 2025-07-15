@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const isQueueItem = currentTargetItem.closest('#file-tree-container');
             const isCompletedItem = currentTargetItem.closest('#completed-list');
+            const isInProgressItem = currentTargetItem.closest('#in-progress-list');
             const isFile = currentTargetItem.classList.contains('file-item');
 
             let menuContent = '';
@@ -38,12 +39,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isQueueItem && isFile) {
                 menuContent = `
                     <a href="#" id="context-move-top" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Mover para o topo da fila</a>
-                    <a href="#" id="context-pause-item" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Pausar este arquivo</a>
                     <div class="my-1 border-t border-gray-100"></div>
                     <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Mídia Original</a>
                     <a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
                     <div class="my-1 border-t border-gray-100"></div>
                     <a href="#" id="context-remove" class="block px-4 py-2 text-red-600 hover:bg-red-100">Remover da Fila</a>
+                `;
+            } else if (isInProgressItem) {
+                menuContent = `
+                    <a href="#" id="context-pause-item" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Pausar este arquivo</a>
+                    <div class="my-1 border-t border-gray-100"></div>
+                    <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Mídia Original</a>
+                    <a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
                 `;
             } else if (isCompletedItem) {
                  menuContent = `
@@ -55,6 +62,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             contextMenu.innerHTML = menuContent;
+
+            // Pausa individual
+            const pauseItemBtn = document.getElementById('context-pause-item');
+            if (pauseItemBtn) pauseItemBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const filePath = currentTargetItem.dataset.filepath;
+                await fetch('/pause-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+                closeContextMenu();
+            });
 
             // Adiciona listeners para as ações
             const openFileBtn = document.getElementById('context-open-file');

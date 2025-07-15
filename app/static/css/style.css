@@ -1,50 +1,131 @@
 /* Conteúdo de app/static/css/style.css */
 body {
   font-family: 'Inter', sans-serif;
+  background-color: #F8F9FA;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
-/* Scrollbar fino para listas */
+
+/* --- Estilos para o Tema Escuro (RNF3 - CORRIGIDO) --- */
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html.dark header, 
+html.dark footer,
+html.dark section {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+html.dark h2,
+html.dark h3,
+html.dark label,
+html.dark #progress-text-general,
+html.dark .text-sm {
+  color: #d1d5db;
+}
+
+html.dark label[for="keep-structure-checkbox"] {
+    color: #f3f4f6;
+}
+
+html.dark input[type="text"],
+html.dark input[type="number"],
+html.dark select {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+html.dark input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark button,
+html.dark button:disabled {
+    opacity: 1.0;
+}
+html.dark button:disabled {
+    opacity: 0.5;
+}
+html.dark #select-origem-btn,
+html.dark #select-destino-btn {
+    background-color: #374151;
+    border-color: #4b5563;
+}
+html.dark #select-origem-btn:hover,
+html.dark #select-destino-btn:hover {
+    background-color: #4b5563;
+}
+
+html.dark .file-item,
+html.dark .folder-item > summary {
+    color: #d1d5db !important;
+}
+
+html.dark li.file-item:hover,
+html.dark details.folder-item > summary:hover {
+    background-color: #374151;
+}
+
+/* Correção para Menus e Modais */
+html.dark #contextMenu,
+html.dark #settings-modal .bg-white {
+    background-color: #27272a;
+    border-color: #4b5563;
+}
+
+html.dark #contextMenu a {
+    color: #d1d5db;
+}
+html.dark #contextMenu a:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+html.dark #contextMenu .text-red-600 {
+    color: #f87171 !important;
+}
+html.dark #contextMenu a.hover\:bg-red-100:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+html.dark #settings-modal .border-b,
+html.dark #settings-modal .border-t,
+html.dark #contextMenu .border-t {
+    border-color: #4b5563;
+}
+html.dark #settings-modal #close-settings-modal:hover {
+    color: #ffffff;
+}
+html.dark #settings-modal .bg-gray-50 {
+    background-color: #1f2937;
+}
+
+/* --- Fim dos Estilos do Tema Escuro --- */
+
+/* Scrollbar thin for lists */
 .scrollbar-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
-  border-radius: 4px;
-  border: 2px solid #f1f5f9;
+  border-radius: 3px;
 }
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f1f5f9;
+  scrollbar-color: #cbd5e1 transparent;
 }
 
-/* Tema escuro */
-html.dark, body.dark {
-  background: #18181b !important;
-  color: #e5e7eb !important;
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
 }
-.dark .bg-white { background-color: #23232b !important; }
-.dark .text-gray-800 { color: #e5e7eb !important; }
-.dark .border-gray-200 { border-color: #333646 !important; }
-.dark .bg-gray-100 { background-color: #23232b !important; }
-.dark .bg-gray-200 { background-color: #23232b !important; }
-.dark .bg-blue-600 { background-color: #2563eb !important; }
-.dark .text-gray-500 { color: #a1a1aa !important; }
-.dark .text-gray-700 { color: #d1d5db !important; }
-.dark .rounded-lg { box-shadow: 0 2px 8px #0006; }
-.dark .shadow-sm { box-shadow: 0 2px 8px #0006; }
-.dark input, .dark select, .dark textarea {
-  background: #23232b !important;
-  color: #e5e7eb !important;
-  border-color: #333646 !important;
+html.dark .scrollbar-thin {
+    scrollbar-color: #4b5563 transparent;
 }
-.dark .modal, .dark .menu, .dark .dropdown, .dark .contextMenu {
-  background: #23232b !important;
-  color: #e5e7eb !important;
-  border-color: #333646 !important;
-}
-.dark .fa-folder { color: #facc15 !important; }
-.dark .fa-check-circle { color: #22c55e !important; }
-.dark .fa-cog { color: #60a5fa !important; }

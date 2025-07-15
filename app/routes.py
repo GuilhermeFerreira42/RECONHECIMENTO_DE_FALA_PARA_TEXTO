@@ -71,6 +71,16 @@ def resume_processing():
         return jsonify({'status': 'sucesso', 'message': 'Processo retomado.'})
     return jsonify({'status': 'erro', 'message': 'Nenhum processo pausado para retomar.'}), 400
 
+@app.route('/pause-file', methods=['POST'])
+def pause_file():
+    global transcription_job
+    data = request.get_json()
+    file_path = data.get('file_path')
+    if transcription_job and file_path:
+        transcription_job.request_pause_file(file_path)
+        return jsonify({'status': 'sucesso', 'message': f'Arquivo pausado: {file_path}'})
+    return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
+
 @app.route('/get-progress')
 def get_progress():
     global transcription_job

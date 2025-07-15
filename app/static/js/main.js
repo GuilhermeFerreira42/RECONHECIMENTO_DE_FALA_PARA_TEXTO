@@ -171,6 +171,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Adicionar spinner em pastas da Coluna Fonte ---
+    function updateFolderSpinners(filesInProgress) {
+        // Remove todos os spinners antigos
+        fileTreeContainer.querySelectorAll('.folder-item summary .fa-cog').forEach(el => el.remove());
+        // Para cada pasta, verifica se contém algum arquivo em progresso
+        fileTreeContainer.querySelectorAll('details.folder-item').forEach(details => {
+            const summary = details.querySelector('summary');
+            const folderPath = summary.dataset && summary.dataset.folderpath;
+            // Caminhos dos arquivos em progresso
+            const files = Object.keys(filesInProgress);
+            let hasActive = false;
+            // Verifica se algum arquivo em progresso está dentro desta pasta
+            files.forEach(fp => {
+                if (folderPath && fp.startsWith(folderPath)) hasActive = true;
+            });
+            if (hasActive) {
+                const spinner = document.createElement('i');
+                spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
+                summary.appendChild(spinner);
+            }
+        });
+    }
+
     // --- Exibir porcentagem de progresso na Fila Ativa ---
     function updateProgress() {
         fetch('/get-progress')
@@ -180,13 +203,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 progressBarGeneral.style.width = `${data.progress_general}%`;
                 progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
                 inProgressList.innerHTML = '';
+                updateFolderSpinners(data.files_in_progress);
                 Object.entries(data.files_in_progress).forEach(([path, info]) => {
                     const li = document.createElement('li');
                     li.className = 'flex flex-col px-4 py-3 border-b border-gray-100';
                     li.dataset.filepath = path;
+                    let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                    if (info.status === 'paused') {
+                        statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                    }
                     li.innerHTML = `
                         <div class="flex items-center gap-3">
-                            <i class="fas fa-cog fa-spin text-blue-500"></i>
+                            ${statusIcon}
                             <p class="flex-1 font-medium truncate" title="${path}">${info.filename}</p>
                             <span class="ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
                         </div>
@@ -200,7 +228,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                     inProgressList.appendChild(li);
                     const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${path}"]`);
-                    if (treeNode) treeNode.style.color = 'blue';
+                    if (treeNode) treeNode.style.color = info.status === 'paused' ? 'orange' : 'blue';
                 });
                 data.completed_files.forEach(fileInfo => {
                     const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
