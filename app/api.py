@@ -66,7 +66,7 @@ class Api:
 
     def validate_path(self, path):
         """Verifica se um caminho (arquivo ou pasta) é válido."""
-        return os.path.exists(path)
+        return os.path.isdir(path)
 
     # ANOTAÇÃO: Função atualizada para selecionar o arquivo no explorador.
     def open_folder_in_explorer(self, path):

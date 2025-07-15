@@ -1,24 +1,50 @@
 /* Conteúdo de app/static/css/style.css */
 body {
   font-family: 'Inter', sans-serif;
-  background-color: #F8F9FA;
-  color: #111827;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
-/* Scrollbar thin for lists */
+/* Scrollbar fino para listas */
 .scrollbar-thin::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: transparent;
+  background: #f1f5f9;
 }
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background-color: #cbd5e1;
-  border-radius: 3px;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
 }
 .scrollbar-thin {
   scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 transparent;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
+
+/* Tema escuro */
+html.dark, body.dark {
+  background: #18181b !important;
+  color: #e5e7eb !important;
+}
+.dark .bg-white { background-color: #23232b !important; }
+.dark .text-gray-800 { color: #e5e7eb !important; }
+.dark .border-gray-200 { border-color: #333646 !important; }
+.dark .bg-gray-100 { background-color: #23232b !important; }
+.dark .bg-gray-200 { background-color: #23232b !important; }
+.dark .bg-blue-600 { background-color: #2563eb !important; }
+.dark .text-gray-500 { color: #a1a1aa !important; }
+.dark .text-gray-700 { color: #d1d5db !important; }
+.dark .rounded-lg { box-shadow: 0 2px 8px #0006; }
+.dark .shadow-sm { box-shadow: 0 2px 8px #0006; }
+.dark input, .dark select, .dark textarea {
+  background: #23232b !important;
+  color: #e5e7eb !important;
+  border-color: #333646 !important;
+}
+.dark .modal, .dark .menu, .dark .dropdown, .dark .contextMenu {
+  background: #23232b !important;
+  color: #e5e7eb !important;
+  border-color: #333646 !important;
+}
+.dark .fa-folder { color: #facc15 !important; }
+.dark .fa-check-circle { color: #22c55e !important; }
+.dark .fa-cog { color: #60a5fa !important; }

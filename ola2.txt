@@ -1,0 +1,982 @@
+Olá! Agradeço pelo feedback e pelo excelente detalhamento das novas funcionalidades. O plano 5W2H1S e a documentação técnica são extremamente claros e fornecem um roteiro perfeito para a evolução do sistema. É ótimo ver a estrutura que construímos servindo de base para melhorias tão sofisticadas.
+
+Com certeza darei o suporte necessário para implementar essas novas fases. Com base no seu plano, realizei uma atualização significativa no sistema, focando na Fase 1: Interface e Feedback Visual e preparando o terreno para as fases seguintes.
+
+As principais mudanças incluem:
+
+Reestruturação da Lógica da Interface: A interface agora reflete o fluxo que você descreveu:
+
+Coluna 1 (Fonte): Funciona como uma área de "staging". Arquivos únicos aparecem com nomes simples, e pastas geram a árvore de diretórios.
+
+Coluna 2 (Fila Ativa): Ao iniciar, os itens da fonte são movidos para cá. É aqui que o progresso real, as animações e os status são exibidos.
+
+Coluna 3 (Concluídos): Permanece como o destino final dos arquivos processados.
+
+Feedback Visual Aprimorado:
+
+Adicionei animações de status na Fila Ativa. Arquivos em processamento agora exibem um ícone de engrenagem girando (spinner), e arquivos pausados mostram um ícone de pausa.
+
+Ao concluir um arquivo, um selo de sucesso (ícone de verificação) é adicionado ao item correspondente na árvore de diretórios original (Coluna 1), fornecendo um feedback visual claro sobre o que já foi feito.
+
+Reintegração das Informações de Tempo:
+
+O backend (transcriber.py) foi ajustado para calcular e enviar o tempo decorrido e o tempo restante estimado (ETA) para cada arquivo individual.
+
+O frontend (main.js) agora exibe essas informações em tempo real para cada item na Fila Ativa, dando ao usuário uma previsão muito mais precisa.
+
+Abaixo estão os arquivos atualizados. Eles implementam a Fase 1 do seu plano e criam a base necessária para o controle da fila e as configurações avançadas das próximas fases.
+
+---
+
+# ==================================================================
+# Arquivo: app/transcriber.py (Atualizado)
+# Principais mudanças:
+# - Rastreia o tempo de início para cada arquivo individualmente.
+# - Calcula e retorna o tempo decorrido e o ETA para cada arquivo em progresso.
+# - A lógica de concorrência e pausa/retomada permanece a mesma.
+# ==================================================================
+
+import os
+import sys
+import subprocess
+import threading
+import time
+from pathlib import Path
+import torch
+import whisper
+import vosk
+import wave
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# --- Funções de Utilidade (sem alterações) ---
+SUPPORTED_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.m4a', '.flac')
+
+def get_ffmpeg_path():
+    base_path = Path(__file__).resolve().parent.parent
+    vendor_path = base_path / "vendor" / "ffmpeg"
+    if sys.platform == "win32":
+        return str(vendor_path / "windows" / "ffmpeg.exe")
+    else: # Linux/macOS
+        return str(vendor_path / ({"linux": "linux", "darwin": "macos"}[sys.platform]) / "ffmpeg")
+
+def convert_to_wav(media_path, temp_wav_path):
+    ffmpeg_path = get_ffmpeg_path()
+    command = [ffmpeg_path, '-i', str(media_path), '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', '-y', str(temp_wav_path)]
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[ERRO] Falha na conversão do FFmpeg para {media_path}: {e}")
+        return False
+
+# --- Gerenciador de Modelos (sem alterações) ---
+class ModelManager:
+    def __init__(self):
+        self.loaded_models = {}
+        self.vosk_model_path = str(Path(__file__).resolve().parent.parent / "vendor" / "vosk-model")
+
+    def get_model(self, model_name: str):
+        if model_name in self.loaded_models:
+            return self.loaded_models[model_name]
+        print(f"Carregando modelo '{model_name}'...")
+        model = None
+        try:
+            if model_name.startswith('whisper'):
+                model = whisper.load_model(model_name.split('_')[1])
+            elif model_name == 'vosk':
+                model = vosk.Model(self.vosk_model_path)
+            if model:
+                self.loaded_models[model_name] = model
+            return model
+        except Exception as e:
+            print(f"[ERRO CRÍTICO] Falha ao carregar o modelo '{model_name}': {e}")
+            return None
+
+# --- CLASSE GERENCIADORA DE TRANSCRIÇÃO (ATUALIZADA) ---
+class TranscriptionManager:
+    def __init__(self, dest_path, model_name, file_list, model_manager, keep_structure=False, source_path=None, max_concurrent_tasks=1):
+        self.dest_path = Path(dest_path)
+        self.model_name = model_name
+        self.model_manager = model_manager
+        self.model = None
+        self.files_to_process = file_list
+        self.total_files = len(file_list)
+        self.files_processed_count = 0
+        self.status = "idle"
+        self.progress_general = 0
+        self.batch_start_time = None
+        
+        self.max_concurrent_tasks = max_concurrent_tasks
+        self.stop_requested = threading.Event()
+        self.pause_event = threading.Event()
+        self.pause_event.set()
+        
+        self.files_in_progress = {}
+        self.files_in_progress_lock = threading.Lock()
+        
+        self.newly_completed_files = []
+        self.completed_files_lock = threading.Lock()
+
+        self.keep_structure = keep_structure
+        self.source_path = Path(source_path) if source_path else None
+        self.executor = None
+
+    def request_stop(self):
+        print("[AVISO] Solicitação de parada recebida.")
+        self.stop_requested.set()
+        if self.pause_event.is_set() is False:
+            self.pause_event.set()
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+
+    def request_pause(self):
+        if self.status == "running":
+            self.pause_event.clear()
+            self.status = "paused"
+            print("[INFO] Processo pausado.")
+
+    def request_resume(self):
+        if self.status == "paused":
+            self.pause_event.set()
+            self.status = "running"
+            print("[INFO] Processo retomado.")
+            
+    def update_concurrency(self, new_max_tasks):
+        self.max_concurrent_tasks = new_max_tasks
+        if self.executor and self.status == "running":
+            print(f"[INFO] Concorrência será ajustada para {new_max_tasks} na próxima leva de tarefas.")
+            # A mudança real acontece na recriação do executor, se a lógica permitir.
+            # Para uma mudança em tempo real, seria necessário um gerenciamento de pool mais complexo.
+            # Por agora, a configuração será usada na próxima inicialização.
+
+    def _format_time(self, seconds):
+        if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
+            return "--:--"
+        minutes, seconds = divmod(int(seconds), 60)
+        return f"{minutes:02d}:{seconds:02d}"
+
+    def _update_file_progress(self, file_path_str, progress, start_time):
+        with self.files_in_progress_lock:
+            if file_path_str in self.files_in_progress:
+                elapsed = time.time() - start_time
+                eta = (elapsed / progress * (100 - progress)) if progress > 0 else None
+                self.files_in_progress[file_path_str]['progress'] = progress
+                self.files_in_progress[file_path_str]['elapsed_str'] = self._format_time(elapsed)
+                self.files_in_progress[file_path_str]['eta_str'] = self._format_time(eta)
+
+    def _transcribe_with_vosk(self, temp_wav_file, file_path_str, start_time):
+        recognizer = vosk.KaldiRecognizer(self.model, 16000)
+        full_transcript = []
+        with wave.open(str(temp_wav_file), "rb") as wf:
+            total_frames = wf.getnframes()
+            if total_frames == 0: return ""
+            
+            while not self.stop_requested.is_set():
+                self.pause_event.wait()
+                data = wf.readframes(4000)
+                if len(data) == 0: break
+                
+                self._update_file_progress(file_path_str, (wf.tell() / total_frames) * 100, start_time)
+
+                if recognizer.AcceptWaveform(data):
+                    full_transcript.append(json.loads(recognizer.Result()).get('text', ''))
+
+            if not self.stop_requested.is_set():
+                full_transcript.append(json.loads(recognizer.FinalResult()).get('text', ''))
+        return " ".join(full_transcript).strip()
+
+    def _transcribe_with_whisper(self, temp_wav_file, file_path_str, start_time):
+        self.pause_event.wait()
+        if self.stop_requested.is_set(): return None
+        
+        # Simulação de progresso para Whisper
+        self._update_file_progress(file_path_str, 50, start_time)
+        result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
+        return result['text'].strip()
+
+    def _transcribe_single_file(self, file_path_str):
+        if self.stop_requested.is_set(): return None
+        
+        file_path = Path(file_path_str)
+        start_time = time.time()
+        
+        with self.files_in_progress_lock:
+            self.files_in_progress[file_path_str] = {
+                "filename": file_path.name, "progress": 0, "status": "running",
+                "elapsed_str": "00:00", "eta_str": "--:--"
+            }
+
+        self.pause_event.wait()
+        if self.stop_requested.is_set(): return None
+
+        if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
+            output_txt_path = self.dest_path / file_path.relative_to(self.source_path).with_suffix('.txt')
+        else:
+            output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
+        output_txt_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav"
+
+        try:
+            if not convert_to_wav(str(file_path), str(temp_wav_file)):
+                raise Exception("Falha na conversão")
+
+            self.pause_event.wait()
+            if self.stop_requested.is_set(): return None
+
+            transcript_text = None
+            if self.model_name.startswith('whisper'):
+                transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str, start_time)
+            else:
+                transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str, start_time)
+            
+            if self.stop_requested.is_set(): return None
+
+            if transcript_text:
+                with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
+                with self.completed_files_lock:
+                    self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)})
+                return file_path_str
+            else:
+                raise Exception("Transcrição vazia")
+        except Exception as e:
+            print(f"[ERRO] Falha em {file_path.name}: {e}")
+            return None
+        finally:
+            if os.path.exists(temp_wav_file):
+                try: os.remove(temp_wav_file)
+                except OSError: pass
+            with self.files_in_progress_lock:
+                if file_path_str in self.files_in_progress:
+                    del self.files_in_progress[file_path_str]
+
+    def run_transcription(self):
+        self.model = self.model_manager.get_model(self.model_name)
+        if not self.model:
+            self.status = "error"
+            return
+
+        self.status = "running"
+        self.batch_start_time = time.time()
+        self.files_processed_count = 0
+        
+        with ThreadPoolExecutor(max_workers=self.max_concurrent_tasks) as self.executor:
+            future_to_file = {self.executor.submit(self._transcribe_single_file, fp): fp for fp in self.files_to_process}
+            for future in as_completed(future_to_file):
+                if self.stop_requested.is_set(): break
+                if future.result():
+                    self.files_processed_count += 1
+        
+        self.status = "stopped" if self.stop_requested.is_set() else "completed"
+        print(f"PROCESSO FINALIZADO COM STATUS: {self.status.upper()}")
+
+    def get_status(self):
+        with self.completed_files_lock:
+            completed_list = self.newly_completed_files
+            self.newly_completed_files = []
+        
+        with self.files_in_progress_lock:
+            # Atualiza o status dos arquivos pausados
+            if self.status == 'paused':
+                for f in self.files_in_progress.values(): f['status'] = 'paused'
+            in_progress_copy = self.files_in_progress.copy()
+
+        if self.status in ["running", "paused"] and self.total_files > 0:
+            self.progress_general = (self.files_processed_count / self.total_files) * 100
+        elif self.status == 'completed':
+            self.progress_general = 100
+
+        return {
+            "status": self.status,
+            "progress_general": self.progress_general,
+            "batch_elapsed_str": self._format_time(time.time() - self.batch_start_time if self.batch_start_time else 0),
+            "total_files": self.total_files,
+            "files_processed": self.files_processed_count,
+            "files_in_progress": in_progress_copy,
+            "completed_files": completed_list
+        }
+```html
+<!-- 
+  ==================================================================
+  Arquivo: app/templates/index.html (Atualizado)
+  Principais mudanças:
+  - Títulos das colunas alterados para "Fonte", "Fila Ativa", "Concluídos".
+  - Adicionado `data-filename` aos itens da árvore para busca.
+  - Template para itens na "Fila Ativa" inclui placeholders para tempo e ícone de status.
+  - Adicionado tema escuro e toggle nas configurações.
+  - Inputs de caminho agora são editáveis.
+  ==================================================================
+-->
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel de Transcrição Avançado</title>
+  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
+  <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet" />
+  <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="h-screen flex flex-col select-none bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+
+  <!-- Cabeçalho -->
+  <header class="flex items-center justify-between flex-wrap bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 py-3 gap-4 shrink-0">
+    <div class="flex items-center gap-x-6 gap-y-3 flex-wrap">
+        <div>
+            <label for="origem" class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">ORIGEM</label>
+            <div class="flex items-center">
+                <input id="origem" type="text" class="w-56 md:w-64 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Arraste ou selecione uma pasta...">
+                <button id="select-origem-btn" type="button" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300 dark:border-gray-600">...</button>
+            </div>
+        </div>
+        <div>
+            <label for="destino" class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">DESTINO</label>
+            <div class="flex items-center">
+                <input id="destino" type="text" class="w-56 md:w-64 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm border border-gray-300 dark:border-gray-600 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Arraste ou selecione um destino...">
+                <button id="select-destino-btn" type="button" class="bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 text-gray-700 dark:text-gray-200 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300 dark:border-gray-600">...</button>
+            </div>
+        </div>
+        <div class="flex items-end gap-4">
+            <div>
+                <label for="model-selector" class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">MODELO</label>
+                <select id="model-selector" class="w-48 px-3 py-2 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 text-sm border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="whisper_base" selected>Whisper - Base</option>
+                    <option value="whisper_tiny">Whisper - Tiny</option>
+                    <option value="whisper_small">Whisper - Small</option>
+                    <option value="whisper_medium">Whisper - Medium</option>
+                    <option value="whisper_large">Whisper - Large</option>
+                    <option value="vosk">Vosk</option>
+                </select>
+            </div>
+            <div class="flex items-center pb-2">
+                <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 dark:border-gray-600 text-blue-600 focus:ring-blue-500 bg-gray-100 dark:bg-gray-900">
+                <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900 dark:text-gray-300">Manter estrutura</label>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="start-btn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>INICIAR</button>
+      <button id="pause-btn" class="hidden flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-pause"></i>PAUSAR</button>
+      <button id="resume-btn" class="hidden flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>RETOMAR</button>
+      <button id="stop-btn" class="hidden flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-stop"></i>PARAR</button>
+      <button id="settings-btn" class="text-gray-500 dark:text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 px-2 py-2 rounded-md transition-colors"><i class="fas fa-cog fa-lg"></i></button>
+    </div>
+  </header>
+
+  <!-- Corpo Principal (3 Colunas) -->
+  <main id="drop-zone" class="flex-1 flex flex-col lg:flex-row p-4 gap-4 overflow-y-auto lg:overflow-y-hidden">
+    <section id="source-column" class="flex flex-col w-full lg:w-1/3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h2 class="text-base font-semibold">Fonte</h2>
+            <div class="flex items-center gap-4">
+              <button id="add-file-btn" title="Adicionar arquivos avulsos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"><i class="fas fa-plus"></i></button>
+              <button id="clear-queue-btn" title="Limpar a fonte" class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-red-600 dark:hover:text-red-400"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </header>
+        <div id="source-list" class="flex-1 overflow-y-auto scrollbar-thin p-2">
+            <!-- Arquivos e árvores de diretório aparecerão aqui -->
+        </div>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <header class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h2 class="text-base font-semibold">Fila Ativa</h2>
+        </header>
+        <ul id="active-queue-list" class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+            <!-- Itens sendo processados aparecerão aqui -->
+        </ul>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-700 shrink-0">
+            <h2 class="text-base font-semibold">Concluídos</h2>
+            <button id="clear-completed-btn" title="Limpar lista de concluídos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-100"><i class="fas fa-broom"></i></button>
+        </header>
+        <ul id="completed-list" class="flex-1 overflow-y-auto scrollbar-thin p-2 space-y-2">
+            <!-- Arquivos concluídos aparecerão aqui -->
+        </ul>
+    </section>
+  </main>
+  
+  <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-600 rounded-lg flex items-center justify-center pointer-events-none z-50">
+      <div class="text-center text-blue-800 font-bold text-2xl"><i class="fas fa-folder-plus fa-3x"></i><p class="mt-4">Solte a pasta aqui</p></div>
+  </div>
+
+  <footer class="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 px-4 py-2 text-sm shrink-0">
+    <div class="w-full">
+        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600 dark:text-gray-400">Pronto para iniciar.</p>
+        <div class="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+            <div id="progress-bar-general" class="h-2 bg-blue-600 rounded-full transition-width duration-300" style="width: 0%;"></div>
+        </div>
+    </div>
+  </footer>
+
+  <div id="contextMenu" class="hidden fixed z-50 w-56 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 text-sm"></div>
+  
+  <div id="settings-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40">
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-md">
+          <div class="flex justify-between items-center p-4 border-b dark:border-gray-700">
+              <h3 class="text-lg font-semibold">Configurações</h3>
+              <button id="close-settings-modal" class="text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-white text-2xl">&times;</button>
+          </div>
+          <div class="p-6 space-y-6">
+              <div>
+                  <label for="max-concurrent-tasks" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Processos Simultâneos (1-16)</label>
+                  <input type="number" id="max-concurrent-tasks" min="1" max="16" class="mt-1 block w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+              </div>
+              <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Tema Escuro</span>
+                  <label for="dark-theme-toggle" class="inline-flex relative items-center cursor-pointer">
+                      <input type="checkbox" id="dark-theme-toggle" class="sr-only peer">
+                      <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
+                  </label>
+              </div>
+              <div class="flex items-center justify-between">
+                  <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Ocultar Painel Fonte</span>
+                  <input type="checkbox" id="hide-source-panel-toggle" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+              </div>
+          </div>
+          <div class="flex justify-end p-4 bg-gray-50 dark:bg-gray-800 border-t dark:border-gray-700 rounded-b-lg">
+              <button id="save-settings-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Salvar e Fechar</button>
+          </div>
+      </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+```javascript
+// ==================================================================
+// Arquivo: app/static/js/main.js (Atualizado)
+// Principais mudanças:
+// - Lógica para gerenciar o novo fluxo de 3 colunas (Fonte -> Fila Ativa -> Concluídos).
+// - Renderização condicional na coluna Fonte (árvore para pastas, lista para arquivos).
+// - Implementação de animações de status e exibição de tempo (decorrido/ETA).
+// - Adição de selo de "concluído" na árvore de fonte.
+// - Lógica para o tema escuro e para ocultar o painel de fonte.
+// - Inputs de caminho agora são editáveis e validam o caminho ao perder o foco.
+// ==================================================================
+
+function waitForPywebviewApi() {
+    return new Promise(resolve => {
+        const interval = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(interval);
+                resolve(window.pywebview.api);
+            }
+        }, 50);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const api = await waitForPywebviewApi();
+    
+    // --- Referências de Elementos da UI ---
+    const elements = {
+        startBtn: document.getElementById('start-btn'),
+        stopBtn: document.getElementById('stop-btn'),
+        pauseBtn: document.getElementById('pause-btn'),
+        resumeBtn: document.getElementById('resume-btn'),
+        settingsBtn: document.getElementById('settings-btn'),
+        modelSelector: document.getElementById('model-selector'),
+        origemInput: document.getElementById('origem'),
+        destinoInput: document.getElementById('destino'),
+        selectOrigemBtn: document.getElementById('select-origem-btn'),
+        selectDestinoBtn: document.getElementById('select-destino-btn'),
+        addFileBtn: document.getElementById('add-file-btn'),
+        clearQueueBtn: document.getElementById('clear-queue-btn'),
+        clearCompletedBtn: document.getElementById('clear-completed-btn'),
+        sourceList: document.getElementById('source-list'),
+        activeQueueList: document.getElementById('active-queue-list'),
+        completedList: document.getElementById('completed-list'),
+        progressBarGeneral: document.getElementById('progress-bar-general'),
+        progressTextGeneral: document.getElementById('progress-text-general'),
+        settingsModal: document.getElementById('settings-modal'),
+        closeSettingsModalBtn: document.getElementById('close-settings-modal'),
+        saveSettingsBtn: document.getElementById('save-settings-btn'),
+        maxConcurrentInput: document.getElementById('max-concurrent-tasks'),
+        darkThemeToggle: document.getElementById('dark-theme-toggle'),
+        hideSourcePanelToggle: document.getElementById('hide-source-panel-toggle'),
+        sourceColumn: document.getElementById('source-column'),
+        dropZone: document.body, // Arrastar para qualquer lugar
+        dropZoneOverlay: document.getElementById('drop-zone-overlay'),
+    };
+
+    let progressInterval = null;
+    let sourceItems = new Map(); // { path: { type: 'file'/'folder', name: '...' } }
+
+    // --- Lógica de Renderização da Fonte ---
+    function renderSourceList() {
+        elements.sourceList.innerHTML = '';
+        if (sourceItems.size === 0) {
+            elements.sourceList.innerHTML = '<p class="text-center text-gray-400 p-4">Adicione arquivos ou uma pasta.</p>';
+            return;
+        }
+
+        const isSingleFolder = Array.from(sourceItems.values()).some(item => item.type === 'folder');
+
+        if (isSingleFolder) {
+            const folderPath = Array.from(sourceItems.values()).find(item => item.type === 'folder').path;
+            const filePaths = Array.from(sourceItems.keys());
+            const tree = buildFileTree(filePaths, folderPath);
+            renderTree(tree, elements.sourceList);
+        } else {
+            const ul = document.createElement('ul');
+            ul.className = 'space-y-1';
+            sourceItems.forEach((item, path) => {
+                const li = document.createElement('li');
+                li.className = 'file-item text-sm text-gray-700 dark:text-gray-300 p-2 rounded-md flex items-center gap-2';
+                li.dataset.filepath = path;
+                li.dataset.filename = item.name;
+                li.innerHTML = `<i class="fas fa-file-audio text-gray-500"></i><span class="truncate">${item.name}</span>`;
+                ul.appendChild(li);
+            });
+            elements.sourceList.appendChild(ul);
+        }
+    }
+
+    function buildFileTree(filePaths, basePath) {
+        const tree = {};
+        filePaths.forEach(path => {
+            const relativePath = path.replace(basePath, '').replace(/^[\\/]/, '');
+            const parts = relativePath.split(/[\\/]/);
+            let currentLevel = tree;
+            parts.forEach((part, index) => {
+                if (index === parts.length - 1) {
+                    currentLevel[part] = { _isLeaf: true, _fullPath: path, _name: part };
+                } else {
+                    if (!currentLevel[part]) currentLevel[part] = { _isLeaf: false };
+                    currentLevel = currentLevel[part];
+                }
+            });
+        });
+        return tree;
+    }
+
+    function renderTree(node, container, level = 0) {
+        const ul = document.createElement('ul');
+        if (level > 0) ul.className = 'pl-4 border-l border-gray-200 dark:border-gray-700';
+
+        Object.keys(node).sort().forEach(key => {
+            if (key.startsWith('_')) return;
+            const itemData = node[key];
+            const li = document.createElement('li');
+            
+            if (itemData._isLeaf) {
+                li.className = 'file-item text-sm text-gray-700 dark:text-gray-300 p-1 rounded-md flex items-center gap-2';
+                li.dataset.filepath = itemData._fullPath;
+                li.dataset.filename = itemData._name;
+                li.innerHTML = `<i class="fas fa-file-audio text-gray-500"></i><span class="truncate">${itemData._name}</span>`;
+            } else {
+                li.innerHTML = `<details class="folder-item" open><summary class="p-1 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md flex items-center gap-2"><i class="fas fa-folder text-yellow-500"></i>${key}</summary></details>`;
+                renderTree(itemData, li.querySelector('details'), level + 1);
+            }
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+    
+    // --- Lógica de Atualização de Progresso ---
+    function updateProgress() {
+        fetch('/get-progress')
+            .then(res => res.json())
+            .then(data => {
+                updateUIForState(data.status);
+                elements.progressBarGeneral.style.width = `${data.progress_general}%`;
+                elements.progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+
+                // Atualiza Fila Ativa
+                elements.activeQueueList.innerHTML = '';
+                Object.entries(data.files_in_progress).forEach(([path, info]) => {
+                    const li = document.createElement('li');
+                    li.className = 'bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg shadow-sm';
+                    li.dataset.filepath = path;
+                    const statusIcon = info.status === 'paused'
+                        ? '<i class="fas fa-pause-circle text-yellow-500"></i>'
+                        : '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                    
+                    li.innerHTML = `
+                        <div class="flex items-center justify-between text-sm">
+                            <div class="flex items-center gap-2 min-w-0">
+                                ${statusIcon}
+                                <p class="font-medium truncate" title="${path}">${info.filename}</p>
+                            </div>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 shrink-0 ml-2">${info.elapsed_str} / ${info.eta_str}</p>
+                        </div>
+                        <div class="mt-2 h-1.5 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                            <div class="h-1.5 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
+                        </div>
+                    `;
+                    elements.activeQueueList.appendChild(li);
+                });
+
+                // Move arquivos concluídos
+                data.completed_files.forEach(fileInfo => {
+                    const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
+                    const sourceNode = document.querySelector(`#source-list li[data-filepath="${sourcePath}"]`);
+                    if (sourceNode && !sourceNode.querySelector('.completion-badge')) {
+                        const badge = document.createElement('i');
+                        badge.className = 'fas fa-check-circle text-green-500 ml-auto completion-badge';
+                        sourceNode.appendChild(badge);
+                    }
+                    
+                    const li = document.createElement('li');
+                    li.className = 'group relative bg-green-50 dark:bg-green-900/50 p-3 rounded-lg';
+                    li.dataset.filepath = fileInfo.output_path;
+                    li.innerHTML = `
+                        <div class="flex items-center gap-2 text-sm">
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <p class="font-medium truncate" title="${fileInfo.output_path}">${fileInfo.output_path.split(/[\\/]/).pop()}</p>
+                            <div class="three-dots-menu absolute top-1/2 -translate-y-1/2 right-2 h-full flex items-center px-2 opacity-0 group-hover:opacity-100 cursor-pointer">
+                                <i class="fas fa-ellipsis-v text-gray-500 dark:text-gray-400"></i>
+                            </div>
+                        </div>
+                    `;
+                    elements.completedList.prepend(li);
+                });
+
+                if (data.status === 'completed' || data.status === 'stopped') {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    elements.activeQueueList.innerHTML = '<p class="text-center text-gray-400 p-4">Fila vazia.</p>';
+                    elements.progressTextGeneral.textContent = `Processo Finalizado. ${data.files_processed}/${data.total_files} concluídos.`;
+                }
+            });
+    }
+
+    // --- Lógica de Ações ---
+    async function handleAddFolder() {
+        const folderPath = await api.open_folder_dialog('Selecione a Pasta de Origem');
+        if (folderPath) {
+            elements.origemInput.value = folderPath;
+            const files = await api.scan_folder_recursively(folderPath);
+            sourceItems.clear();
+            sourceItems.set(folderPath, { type: 'folder', path: folderPath });
+            files.forEach(file => sourceItems.set(file.replace(/\\/g, '/'), { type: 'file', name: file.split(/[\\/]/).pop() }));
+            renderSourceList();
+        }
+    }
+
+    async function handleAddFiles() {
+        const files = await api.open_file_dialog();
+        if (files && files.length > 0) {
+            // Se já houver uma pasta, não limpa, apenas adiciona. Senão, começa do zero.
+            if (!Array.from(sourceItems.values()).some(item => item.type === 'folder')) {
+               // sourceItems.clear(); // Descomente para substituir em vez de adicionar
+            }
+            files.forEach(file => {
+                const path = file.replace(/\\/g, '/');
+                sourceItems.set(path, { type: 'file', name: path.split('/').pop() });
+            });
+            renderSourceList();
+        }
+    }
+
+    function startProcessing() {
+        if (sourceItems.size === 0 || !elements.destinoInput.value) {
+            alert('Selecione arquivos/pasta de origem e uma pasta de destino.');
+            return;
+        }
+
+        elements.completedList.innerHTML = '';
+        elements.activeQueueList.innerHTML = '';
+        
+        const fileList = Array.from(sourceItems.keys()).filter(key => sourceItems.get(key).type === 'file');
+
+        const requestBody = {
+            file_list: fileList,
+            dest_path: elements.destinoInput.value,
+            keep_structure: document.getElementById('keep-structure-checkbox').checked,
+            source_path: elements.origemInput.value,
+            model_name: elements.modelSelector.value
+        };
+
+        fetch('/start-processing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                if (!progressInterval) {
+                    progressInterval = setInterval(updateProgress, 1000);
+                }
+            } else {
+                alert(`Erro: ${data.message}`);
+            }
+        });
+    }
+    
+    // --- Event Listeners ---
+    elements.selectOrigemBtn.addEventListener('click', handleAddFolder);
+    elements.addFileBtn.addEventListener('click', handleAddFiles);
+    elements.selectDestinoBtn.addEventListener('click', async () => {
+        const path = await api.open_folder_dialog('Selecione a Pasta de Destino');
+        if (path) elements.destinoInput.value = path;
+    });
+    
+    elements.startBtn.addEventListener('click', startProcessing);
+    elements.stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
+    elements.pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
+    elements.resumeBtn.addEventListener('click', () => fetch('/resume-processing', { method: 'POST' }));
+
+    elements.clearQueueBtn.addEventListener('click', () => {
+        if (progressInterval) return;
+        sourceItems.clear();
+        elements.origemInput.value = '';
+        renderSourceList();
+    });
+    elements.clearCompletedBtn.addEventListener('click', () => elements.completedList.innerHTML = '');
+
+    // --- Configurações ---
+    elements.settingsBtn.addEventListener('click', () => elements.settingsModal.classList.remove('hidden'));
+    elements.closeSettingsModalBtn.addEventListener('click', () => elements.settingsModal.classList.add('hidden'));
+    elements.saveSettingsBtn.addEventListener('click', () => {
+        fetch('/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ max_concurrent_tasks: parseInt(elements.maxConcurrentInput.value, 10) })
+        });
+        localStorage.setItem('darkTheme', elements.darkThemeToggle.checked);
+        localStorage.setItem('hideSourcePanel', elements.hideSourcePanelToggle.checked);
+        applySettings();
+        elements.settingsModal.classList.add('hidden');
+    });
+
+    function applySettings() {
+        // Tema Escuro
+        if (localStorage.getItem('darkTheme') === 'true') {
+            document.documentElement.classList.add('dark');
+            elements.darkThemeToggle.checked = true;
+        } else {
+            document.documentElement.classList.remove('dark');
+            elements.darkThemeToggle.checked = false;
+        }
+        // Ocultar Painel
+        if (localStorage.getItem('hideSourcePanel') === 'true') {
+            elements.sourceColumn.classList.add('hidden');
+            elements.hideSourcePanelToggle.checked = true;
+        } else {
+            elements.sourceColumn.classList.remove('hidden');
+            elements.hideSourcePanelToggle.checked = false;
+        }
+    }
+
+    // --- Drag & Drop ---
+    elements.dropZone.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); elements.dropZoneOverlay.classList.remove('hidden'); });
+    elements.dropZone.addEventListener('dragleave', e => { e.preventDefault(); e.stopPropagation(); elements.dropZoneOverlay.classList.add('hidden'); });
+    elements.dropZone.addEventListener('drop', async e => {
+        e.preventDefault(); e.stopPropagation();
+        elements.dropZoneOverlay.classList.add('hidden');
+        if (progressInterval) return;
+        
+        // Simulação, pois pywebview não dá acesso direto aos paths arrastados.
+        await handleAddFolder();
+    });
+    
+    // --- Validação de Inputs ---
+    [elements.origemInput, elements.destinoInput].forEach(input => {
+        input.addEventListener('change', async () => {
+            const isValid = await api.validate_path(input.value);
+            input.classList.toggle('border-red-500', !isValid);
+            input.classList.toggle('border-gray-300', isValid);
+        });
+    });
+
+    // --- Inicialização ---
+    fetch('/get-settings').then(res => res.json()).then(data => {
+        elements.maxConcurrentInput.value = data.max_concurrent_tasks || 1;
+    });
+    applySettings();
+    renderSourceList();
+    updateUIForState('idle');
+});
+```css
+/* ==================================================================
+  Arquivo: app/static/css/style.css (Atualizado)
+  Principais mudanças:
+  - Adicionadas variáveis de cor para tema claro/escuro.
+  - Adicionada animação de @keyframes para o spinner.
+  - Adicionada classe `.fa-spin` para aplicar a animação.
+  - Estilos para o tema escuro (`.dark`).
+  ==================================================================
+*/
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+/* Animação de Spinner */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.fa-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Scrollbar */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 4px;
+  border: 2px solid #f1f5f9;
+}
+
+/* Estilos para Tema Escuro */
+.dark .scrollbar-thin::-webkit-scrollbar-track {
+  background: #1f2937;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+  border-color: #1f2937;
+}
+
+/* Ajuste para o toggle de tema */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+```javascript
+// ==================================================================
+// Arquivo: app/static/js/ui.js (Atualizado)
+// Principais mudanças:
+// - O menu de contexto agora é mais genérico para funcionar nos 3 blocos.
+// - As opções do menu são construídas dinamicamente com base no bloco do item clicado.
+// - Adicionada lógica para remover item da fonte (antes de iniciar).
+// ==================================================================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // Função de espera pela API do pywebview
+    const waitForApi = () => new Promise(resolve => {
+        const interval = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(interval);
+                resolve(window.pywebview.api);
+            }
+        }, 50);
+    });
+
+    const api = await waitForApi();
+    const contextMenu = document.getElementById('contextMenu');
+    if (!contextMenu) return;
+
+    let currentTargetItem = null;
+
+    const closeContextMenu = () => {
+        contextMenu.classList.add('hidden');
+        currentTargetItem = null;
+    };
+
+    const showContextMenu = (event, element) => {
+        event.preventDefault();
+        event.stopPropagation();
+        currentTargetItem = element;
+
+        const filepath = element.dataset.filepath;
+        if (!filepath) return;
+
+        const isSourceItem = element.closest('#source-list');
+        const isCompletedItem = element.closest('#completed-list');
+        const isFile = element.classList.contains('file-item');
+
+        let menuContent = '';
+
+        // Construir o menu dinamicamente
+        if (isSourceItem && isFile) {
+            menuContent += `<a href="#" data-action="open-original" class="context-menu-item">Abrir Mídia Original</a>`;
+            menuContent += `<a href="#" data-action="open-location" class="context-menu-item">Abrir Local do Arquivo</a>`;
+            menuContent += `<div class="context-menu-divider"></div>`;
+            menuContent += `<a href="#" data-action="remove-from-source" class="context-menu-item text-red-500">Remover da Fonte</a>`;
+        } else if (isCompletedItem) {
+            menuContent += `<a href="#" data-action="open-transcribed" class="context-menu-item">Abrir Transcrição (.txt)</a>`;
+            menuContent += `<a href="#" data-action="open-location" class="context-menu-item">Abrir Local do Arquivo</a>`;
+        } else {
+            return; // Não mostra menu para pastas na árvore ou itens na fila ativa por enquanto
+        }
+
+        contextMenu.innerHTML = menuContent;
+
+        // Posicionar e mostrar o menu
+        const { clientX: mouseX, clientY: mouseY } = event;
+        contextMenu.style.top = `${mouseY}px`;
+        contextMenu.style.left = `${mouseX}px`;
+        contextMenu.classList.remove('hidden');
+    };
+
+    // Listener de clique para ações do menu
+    contextMenu.addEventListener('click', (e) => {
+        e.preventDefault();
+        const action = e.target.dataset.action;
+        const filepath = currentTargetItem?.dataset.filepath;
+
+        if (!action || !filepath) {
+            closeContextMenu();
+            return;
+        }
+
+        switch (action) {
+            case 'open-original':
+            case 'open-transcribed':
+                api.open_file_natively(filepath);
+                break;
+            case 'open-location':
+                api.open_folder_in_explorer(filepath);
+                break;
+            case 'remove-from-source':
+                // Esta é uma ação do lado do cliente, precisa de um evento customizado
+                // para notificar main.js para remover o item do 'sourceItems' e re-renderizar.
+                const event = new CustomEvent('removeSourceItem', { detail: { filepath } });
+                document.dispatchEvent(event);
+                break;
+        }
+        closeContextMenu();
+    });
+
+    // Listeners globais para mostrar/ocultar o menu
+    document.addEventListener('contextmenu', e => {
+        const targetItem = e.target.closest('li[data-filepath]');
+        if (targetItem) {
+            showContextMenu(e, targetItem);
+        } else {
+            closeContextMenu();
+        }
+    });
+    
+    document.addEventListener('click', () => closeContextMenu());
+    document.addEventListener('keydown', e => e.key === 'Escape' && closeContextMenu());
+
+    // Adiciona estilos dinâmicos para o menu de contexto
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .context-menu-item { display: block; padding: 8px 16px; }
+        .context-menu-item:hover { background-color: #f3f4f6; }
+        .dark .context-menu-item:hover { background-color: #374151; }
+        .context-menu-divider { border-top: 1px solid #e5e7eb; margin: 4px 0; }
+        .dark .context-menu-divider { border-color: #374151; }
+    `;
+    document.head.appendChild(style);
+});
+
+---

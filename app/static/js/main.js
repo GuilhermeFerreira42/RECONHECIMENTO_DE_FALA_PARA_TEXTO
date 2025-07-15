@@ -107,17 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         container.appendChild(ul);
     }
 
-    function updateFileTree() {
-        fileTreeContainer.innerHTML = '';
-        if (fileQueue.size === 0) {
-            fileTreeContainer.innerHTML = '<p class="text-center text-gray-400 p-4">Nenhum arquivo na fila.</p>';
-            return;
-        }
-        const basePath = origemInput.value || '';
-        const tree = buildFileTree(Array.from(fileQueue), basePath);
-        renderTree(tree, fileTreeContainer);
-    }
-
     // --- Funções de UI ---
     function updateUIForState(state) {
         const isIdle = state === 'idle';
@@ -135,18 +124,61 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Lógica de Atualização de Progresso ---
+    // --- Inputs editáveis e validação ---
+    origemInput.addEventListener('blur', async () => {
+        if (origemInput.value) {
+            const isValid = await api.validate_path(origemInput.value);
+            origemInput.classList.toggle('border-red-500', !isValid);
+        }
+    });
+    destinoInput.addEventListener('blur', async () => {
+        if (destinoInput.value) {
+            const isValid = await api.validate_path(destinoInput.value);
+            destinoInput.classList.toggle('border-red-500', !isValid);
+        }
+    });
+
+    // --- Tema escuro ---
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('change', () => {
+            document.documentElement.classList.toggle('dark', darkModeToggle.checked);
+            document.body.classList.toggle('dark', darkModeToggle.checked);
+        });
+    }
+
+    // --- Corrigir exibição de arquivo único vs árvore ---
+    function updateFileTree() {
+        fileTreeContainer.innerHTML = '';
+        if (fileQueue.size === 0) {
+            fileTreeContainer.innerHTML = '<p class="text-center text-gray-400 p-4">Nenhum arquivo na fila.</p>';
+            return;
+        }
+        const basePath = origemInput.value || '';
+        if (fileQueue.size === 1) {
+            // Exibe só o nome do arquivo
+            const file = Array.from(fileQueue)[0];
+            const fileName = file.split(/[\\/]/).pop();
+            const li = document.createElement('li');
+            li.className = 'file-item text-sm text-gray-700 p-1 rounded-md';
+            li.dataset.filepath = file;
+            li.innerHTML = `<i class="fas fa-file-audio text-gray-500 mr-2"></i>${fileName}`;
+            fileTreeContainer.appendChild(li);
+        } else {
+            // Exibe árvore
+            const tree = buildFileTree(Array.from(fileQueue), basePath);
+            renderTree(tree, fileTreeContainer);
+        }
+    }
+
+    // --- Exibir porcentagem de progresso na Fila Ativa ---
     function updateProgress() {
         fetch('/get-progress')
             .then(response => response.json())
             .then(data => {
                 updateUIForState(data.status);
-                
-                // Atualiza barra geral
                 progressBarGeneral.style.width = `${data.progress_general}%`;
                 progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
-
-                // Limpa e recria a lista "Em Progresso"
                 inProgressList.innerHTML = '';
                 Object.entries(data.files_in_progress).forEach(([path, info]) => {
                     const li = document.createElement('li');
@@ -156,24 +188,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                         <div class="flex items-center gap-3">
                             <i class="fas fa-cog fa-spin text-blue-500"></i>
                             <p class="flex-1 font-medium truncate" title="${path}">${info.filename}</p>
+                            <span class="ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                            <span><i class='fas fa-clock mr-1'></i> ${info.elapsed_str || '--:--'}</span>
+                            <span><i class='fas fa-hourglass-half ml-2 mr-1'></i> ETA: ${info.eta_str || '--:--'}</span>
                         </div>
                         <div class="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
                             <div class="h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
                         </div>
                     `;
                     inProgressList.appendChild(li);
-
-                    // Atualiza cor na árvore
                     const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${path}"]`);
                     if (treeNode) treeNode.style.color = 'blue';
                 });
-
-                // Move arquivos concluídos
                 data.completed_files.forEach(fileInfo => {
                     const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
                     const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${sourcePath}"]`);
-                    if (treeNode) treeNode.style.color = 'green';
-                    
+                    if (treeNode) treeNode.innerHTML += ' <i class="fas fa-check-circle text-green-600 ml-1"></i>';
                     const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
                     const li = document.createElement('li');
                     li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100';
@@ -185,9 +217,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <i class="fas fa-ellipsis-v text-gray-500"></i>
                         </div>
                     `;
-                    completedList.prepend(li); // Adiciona no topo
+                    completedList.prepend(li);
                 });
-
                 if (data.status === 'completed' || data.status === 'stopped') {
                     clearInterval(progressInterval);
                     progressInterval = null;

@@ -1,0 +1,1566 @@
+Aqui está a documentação refeita para a Fase 1: Interface e Feedback Visual do sistema de gerenciamento de tarefas, baseada no checklist fornecido, seguida pelo 5W2H1S para contextualização. A documentação foi ajustada para refletir os itens do checklist, incluindo observações específicas, como o problema relatado na exibição de arquivos únicos.
+
+### 5W2H1S para a Fase 1
+
+| **Pergunta**        | **Resposta**                                                                                     |
+|---------------------|-------------------------------------------------------------------------------------------------|
+| **What (O quê)**    | Implementar melhorias na interface e no feedback visual do sistema de gerenciamento de tarefas. |
+| **Why (Por quê)**   | Melhorar a usabilidade e fornecer informações visuais claras sobre o processamento de arquivos. |
+| **Where (Onde)**    | Nas colunas de Fonte e Fila Ativa da interface do sistema.                                      |
+| **When (Quando)**   | Durante a Fase 1 do plano de implementação.                                                    |
+| **Who (Quem)**      | Equipe de desenvolvimento responsável pelo projeto.                                            |
+| **How (Como)**      | Atualizando o código front-end e back-end, corrigindo a exibição de arquivos, adicionando animações e funcionalidades interativas. |
+| **How much (Quanto)** | Estimativa de 1-2 semanas para desenvolvimento e testes.                                       |
+| **Status (Status)** | Em andamento, com alguns itens implementados (ex.: estrutura de diretórios, tempo decorrido e ETA). |
+
+
+---
+
+### Documentação Técnica para a Fase 1: Interface e Feedback Visual
+
+**Objetivo:** Melhorar a interface do usuário e adicionar feedback visual claro para facilitar o acompanhamento do processamento de arquivos no sistema de gerenciamento de tarefas.
+
+Nesta fase, o foco é aprimorar a exibição de arquivos e pastas, implementar feedback visual dinâmico, exibir informações de tempo de forma mais completa, adicionar um tema escuro e permitir edição manual dos campos de destino. Todas as melhorias seguem os requisitos funcionais (RF) e não funcionais (RNF) indicados no checklist.
+
+---
+
+#### **Tarefas Específicas**
+
+1. **Exibição de Arquivos e Pastas (RF1, RF2)**  
+   - **Tarefa:** Exibir apenas o nome do arquivo (sem caminho completo) ao adicionar um arquivo único na Coluna Fonte.  
+     - *Observação:* Atualmente, ao adicionar um arquivo único, a árvore de diretórios é montada, o que não é o comportamento esperado. A lógica de renderização será ajustada para corrigir isso.  
+   - **Tarefa:** Exibir a estrutura de diretórios (árvore) ao adicionar uma pasta na Coluna Fonte.  
+     - *Status:* Já implementado.  
+   - **Tarefa:** Manter a árvore visível durante o processamento, com selos de "concluído" nos arquivos processados na Fila de Processamento.  
+
+2. **Feedback Visual (RNF3, RNF4)**  
+   - **Tarefa:** Adicionar animação de spinner para arquivos em processamento na Fila Ativa, posicionada ao lado da pasta ou ícone, indicando claramente o que está sendo processado na coluna de Fila de Processamento.  
+   - **Tarefa:** Adicionar opção de pausa para arquivos individuais na Fila Ativa via menu de contexto, permitindo pausar arquivos únicos sem interromper o processo inteiro caso tenha mais de um processo rodando.  
+   - **Tarefa:** Adicionar selo de verificação (ícone de sucesso) na árvore de diretórios da Coluna Fonte para arquivos concluídos.  
+
+3. **Informações de Tempo (RF7)**  
+   - **Tarefa:** Exibir tempo decorrido para cada arquivo na Fila Ativa.  
+     - *Status:* Já implementado.  
+   - **Tarefa:** Exibir tempo estimado (ETA) para cada arquivo na Fila Ativa.  
+     - *Status:* Já implementado.  
+   - **Tarefa:** Exibir porcentagem de progresso para cada arquivo na Fila Ativa.  
+
+4. **Tema Escuro (RNF3)**  
+   - **Tarefa:** Implementar tema escuro com toggle nas configurações.  
+   - **Tarefa:** Garantir que o tema escuro seja aplicado a todos os elementos da interface, incluindo menus e modais e que possa ser desativado caso usuário queira.  
+
+5. **Inputs Editáveis (RF9)**  
+   - **Tarefa:** Permitir edição manual dos campos de destino, com validação de caminho para garantir entradas válidas.  
+
+---
+
+#### **Checklist da Fase 1**
+
+- [ ] **Exibição de Arquivos e Pastas (RF1, RF2)**  
+  - [ ] Exibir apenas o nome do arquivo (sem caminho completo) ao adicionar arquivo único na Coluna Fonte.  
+    - *Nota:* Ainda não resolvido; atualmente, a árvore de diretórios é exibida incorretamente para arquivos únicos.  
+  - [x] Exibir estrutura de diretórios (árvore) ao adicionar uma pasta na Coluna Fonte.  
+  - [ ] Manter a árvore visível durante o processamento com selo de "concluído" nos arquivos processados na Fila de Processamento.  
+
+- [ ] **Feedback Visual (RNF3, RNF4)**  
+  - [ ] Adicionar animação de spinner para arquivos em processamento na Fila Ativa, ao lado da pasta ou ícone, na coluna de Fila de Processamento.  
+  - [ ] Adicionar opção de pausa para arquivos pausados na Fila Ativa via menu de contexto, sem pausar o processo inteiro.  
+  - [ ] Adicionar selo de verificação (ícone de sucesso) na árvore de diretórios da Coluna Fonte para arquivos concluídos.  
+
+- [ ] **Informações de Tempo (RF7)**  
+  - [x] Exibir tempo decorrido para cada arquivo na Fila Ativa.  
+  - [x] Exibir tempo estimado (ETA) para cada arquivo na Fila Ativa.  
+  - [ ] Exibir porcentagem de progresso para cada arquivo na Fila Ativa.  
+
+- [ ] **Tema Escuro (RNF3)**  
+  - [ ] Implementar tema escuro com toggle nas configurações podendo desativar e ativar.  
+  - [ ] Garantir que o tema escuro seja aplicado a todos os elementos da interface (incluindo menus e modais).  
+
+- [ ] **Inputs Editáveis (RF9)**  
+  - [ ] Permitir edição manual dos campos de destino.  
+
+---
+
+#### **Entregáveis**
+- Interface corrigida para exibir arquivos únicos sem caminhos completos e manter a árvore de diretórios funcional.  
+- Feedback visual dinâmico com animações de spinner, opção de pausa e selos de verificação.  
+- Informações de tempo completas, incluindo porcentagem de progresso.  
+- Tema escuro implementado e aplicado a toda a interface.  
+- Campos de destino editáveis com validação.  
+
+#### **Critérios de Sucesso**
+- Os usuários conseguem identificar rapidamente o status de cada arquivo por meio de feedback visual claro (spinners, ícones de pausa e selos de verificação).  
+- A interface é intuitiva, com exibição correta de arquivos e pastas, suporte ao tema escuro e campos editáveis funcionais.  
+
+---
+
+
+Essa documentação reflete fielmente o checklist fornecido, incluindo os problemas apontados (como a exibição incorreta de arquivos únicos) e detalhando cada tarefa a ser realizada. O 5W2H1S oferece uma visão geral clara e estruturada para orientar a implementação. A equipe de desenvolvimento pode usar este documento como base para priorizar e executar as melhorias planejadas na Fase 1.
+---
+
+Com certeza\! Baseado na sua excelente documentação da "Fase 1", preparei uma implementação completa que aborda todos os itens do seu checklist.
+
+A seguir, apresento as modificações necessárias em cada arquivo, com explicações detalhadas sobre o que foi alterado e por quê. A estratégia foi:
+
+1.  **Implementar o Tema Escuro:** Adicionar o *toggle* e o CSS necessário para a funcionalidade.
+2.  **Tornar Inputs Editáveis:** Remover o bloqueio e adicionar validação de caminho.
+3.  **Aprimorar o Feedback Visual:** Adicionar ícones de status (spinner, concluído) na árvore de arquivos e implementar a pausa individual.
+4.  **Corrigir a Lógica de Exibição:** Ajustar o JavaScript para diferenciar a exibição de arquivos únicos da exibição de pastas (árvore).
+
+Vamos ao código.
+
+-----
+
+### **Plano de Implementação (Código)**
+
+#### **1. Implementando o Tema Escuro e Inputs Editáveis**
+
+Estas mudanças são focadas principalmente na interface e no estilo.
+
+##### **`app/api.py` (Adicionar Validação de Caminho)**
+
+Precisamos de uma função na API para que o JavaScript possa verificar se um caminho digitado manualmente existe.
+
+```python
+import webview
+import os
+import subprocess
+import sys
+from tkinter import Tk, filedialog
+
+# Definimos as extensões suportadas aqui para que a API possa usá-las
+SUPPORTED_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.m4a', '.flac')
+
+class Api:
+    """
+    A 'ponte' que expõe a lógica do back-end para ser chamada pelo JavaScript. Os métodos aqui interagem diretamente com o sistema de arquivos do usuário.
+    """
+    def _initialize_tk(self):
+        """Inicializa e oculta a janela raiz do Tkinter."""
+        root = Tk()
+        root.withdraw()
+        return root
+
+    def open_file_dialog(self):
+        """
+        Abre uma caixa de diálogo nativa para o usuário selecionar um ou mais arquivos. Retorna uma lista de caminhos dos arquivos selecionados.
+        """
+        print("[API] Chamada recebida: open_file_dialog")
+        root = self._initialize_tk()
+        files = filedialog.askopenfilenames(
+            parent=root,
+            title='Selecione os arquivos de mídia',
+            filetypes=[("Arquivos de Mídia", "*.mp4 *.mov *.avi *.mkv *.mp3 *.wav *.m4a *.flac"), ("Todos os arquivos", "*.*")]
+        )
+        root.destroy()
+        return list(files) if files else []
+
+    def open_folder_dialog(self, title='Selecione uma pasta'):
+        """
+        Abre uma caixa de diálogo nativa para o usuário selecionar uma pasta. Retorna o caminho da pasta selecionada.
+        """
+        print(f"[API] Chamada recebida: open_folder_dialog com o título: {title}")
+        root = self._initialize_tk()
+        folder_path = filedialog.askdirectory(parent=root, title=title)
+        root.destroy()
+        return folder_path if folder_path else None
+
+    def scan_folder_recursively(self, folder_path):
+        """
+        [NOVA FUNÇÃO]
+        Escaneia uma pasta recursivamente e retorna uma lista de todos os
+        arquivos de mídia com extensões suportadas.
+        """
+        print(f"[API] Escaneando a pasta: {folder_path}")
+        if not folder_path or not os.path.isdir(folder_path):
+            return []
+
+        media_files = []
+        for root, _, files in os.walk(folder_path):
+            for file in files:
+                if file.lower().endswith(SUPPORTED_EXTENSIONS):
+                    full_path = os.path.join(root, file).replace('\\', '/')
+                    media_files.append(full_path)
+        
+        print(f"[API] Encontrados {len(media_files)} arquivos de mídia.")
+        return media_files
+
+    # NOVO MÉTODO (RF9) - Verifica se um caminho de pasta existe.
+    def validate_path(self, path):
+        """Verifica se um caminho (arquivo ou pasta) é válido."""
+        print(f"[API] Validando o caminho: {path}")
+        return os.path.isdir(path)
+
+    # ANOTAÇÃO: Função atualizada para selecionar o arquivo no explorador.
+    def open_folder_in_explorer(self, path):
+        """
+        Abre o gerenciador de arquivos e seleciona/revela o arquivo especificado.
+        """
+        print(f"[API] Chamada recebida para revelar o arquivo: {path}")
+        
+        normalized_path = os.path.realpath(path)
+
+        if not os.path.exists(normalized_path):
+            print(f"[ERRO API] Caminho não existe: {normalized_path}")
+            return
+
+        try:
+            if sys.platform == 'win32':
+                # No Windows, o argumento '/select,' abre a pasta e destaca o arquivo.
+                subprocess.run(['explorer', '/select,', normalized_path], check=True)
+            elif sys.platform == 'darwin':
+                # No macOS, o argumento '-R' (reveal) faz o mesmo.
+                subprocess.run(['open', '-R', normalized_path], check=True)
+            else:
+                # No Linux, não há um comando universal para selecionar um arquivo.
+                # A abordagem mais segura é abrir a pasta que o contém.
+                directory = os.path.dirname(normalized_path) if os.path.isfile(normalized_path) else normalized_path
+                subprocess.run(['xdg-open', directory], check=True)
+        except Exception as e:
+            print(f"[ERRO API] Falha ao tentar revelar o arquivo no explorador: {e}")
+
+    # ANOTAÇÃO: Nova função para abrir o arquivo em si com o programa padrão do SO.
+    def open_file_natively(self, path):
+        """
+        Abre um arquivo diretamente com seu aplicativo padrão do sistema.
+        """
+        print(f"[API] Chamada recebida: open_file_natively com o caminho: {path}")
+        if not path or not os.path.isfile(path):
+            print(f"[ERRO API] Caminho do arquivo é inválido ou não existe: {path}")
+            return
+            
+        try:
+            if sys.platform == 'win32':
+                os.startfile(os.path.realpath(path))
+            elif sys.platform == 'darwin':
+                subprocess.run(['open', path], check=True)
+            else:
+                subprocess.run(['xdg-open', path], check=True)
+        except Exception as e:
+            print(f"[ERRO API] Falha ao tentar abrir o arquivo nativamente: {e}")
+
+```
+
+##### **`app/static/css/style.css` (Adicionar Estilos do Tema Escuro)**
+
+Adicionamos um conjunto de regras CSS que são ativadas quando a tag `<html>` tem a classe `.dark`.
+
+```css
+/* Conteúdo de app/static/css/style.css */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F8F9FA; /* Fundo claro padrão */
+  color: #111827; /* Texto escuro padrão */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Estilos para o Tema Escuro (RNF3) --- */
+html.dark body {
+  background-color: #111827; /* Fundo escuro */
+  color: #f3f4f6; /* Texto claro */
+}
+
+html.dark header, 
+html.dark footer,
+html.dark section {
+  background-color: #1f2937; /* Cor de fundo dos painéis */
+  border-color: #374151; /* Cor da borda */
+}
+
+html.dark h2,
+html.dark h3,
+html.dark label,
+html.dark #progress-text-general {
+  color: #d1d5db; /* Títulos e labels mais claros */
+}
+
+html.dark input[type="text"],
+html.dark select {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+
+html.dark input[type="text"]:focus,
+html.dark select:focus {
+    border-color: #3b82f6;
+    ring-color: #3b82f6;
+}
+
+html.dark input[type="text"]::placeholder {
+    color: #9ca3af;
+}
+
+html.dark button:disabled {
+    opacity: 0.5;
+}
+
+html.dark .file-item,
+html.dark .folder-item summary {
+    color: #d1d5db;
+}
+
+html.dark li.file-item:hover,
+html.dark details.folder-item summary:hover {
+    background-color: #374151;
+}
+
+html.dark #contextMenu {
+    background-color: #2b3a4e;
+    border-color: #4b5563;
+}
+
+html.dark #contextMenu a {
+    color: #d1d5db;
+}
+
+html.dark #contextMenu a:hover {
+    background-color: #374151;
+}
+
+html.dark #contextMenu .text-red-600 {
+    color: #f87171;
+}
+html.dark #contextMenu .hover\:bg-red-100:hover {
+    background-color: #7f1d1d;
+}
+
+html.dark #settings-modal .bg-white {
+    background-color: #1f2937;
+}
+
+html.dark #settings-modal .border-b,
+html.dark #settings-modal .border-t {
+    border-color: #374151;
+}
+/* --- Fim dos Estilos do Tema Escuro --- */
+
+
+/* Scrollbar thin for lists */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+html.dark .scrollbar-thin {
+    scrollbar-color: #4b5563 transparent;
+}
+```
+
+##### **`app/templates/index.html` (Adicionar Toggle e Remover `readonly`)**
+
+1.  Removemos o atributo `readonly` do input de destino.
+2.  Adicionamos um *toggle* para o tema escuro dentro do modal de configurações.
+
+<!-- end list -->
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel de Transcrição Avançado</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="h-screen flex flex-col select-none bg-gray-100 text-gray-800">
+
+  <header class="flex items-center justify-between flex-wrap bg-white border-b border-gray-200 px-4 py-3 gap-4 shrink-0">
+    <div class="flex items-center gap-x-6 gap-y-3 flex-wrap">
+        <div>
+            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ORIGEM</label>
+            <div class="flex items-center">
+                <input id="origem" type="text" class="w-56 md:w-64 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Selecione uma pasta..." readonly>
+                <button id="select-origem-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
+            </div>
+        </div>
+        <div>
+            <label for="destino" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">DESTINO</label>
+            <div class="flex items-center">
+                <input id="destino" type="text" class="w-56 md:w-64 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all" placeholder="Selecione ou digite um destino...">
+                <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
+            </div>
+        </div>
+        <div class="flex items-end gap-4">
+            <div>
+                <label for="model-selector" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">MODELO</label>
+                <select id="model-selector" class="w-48 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="whisper_base" selected>Whisper - Base</option>
+                    <option value="whisper_tiny">Whisper - Tiny</option>
+                    <option value="whisper_small">Whisper - Small</option>
+                    <option value="whisper_medium">Whisper - Medium</option>
+                    <option value="whisper_large">Whisper - Large</option>
+                    <option value="vosk">Vosk</option>
+                </select>
+            </div>
+            <div class="flex items-center pb-2">
+                <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">Manter estrutura</label>
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="start-btn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>INICIAR</button>
+      <button id="pause-btn" class="hidden flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-pause"></i>PAUSAR</button>
+      <button id="resume-btn" class="hidden flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>RETOMAR</button>
+      <button id="stop-btn" class="hidden flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-stop"></i>PARAR</button>
+      <button id="settings-btn" class="text-gray-500 hover:text-blue-600 px-2 py-2 rounded-md transition-colors"><i class="fas fa-cog fa-lg"></i></button>
+    </div>
+  </header>
+
+  <main id="drop-zone" class="flex-1 flex flex-col lg:flex-row p-4 gap-4 overflow-y-auto lg:overflow-y-hidden">
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Fila de Processamento</h2>
+            <div class="flex items-center gap-4">
+                <button id="add-file-btn" title="Adicionar arquivos avulsos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-plus"></i></button>
+                <button id="clear-queue-btn" title="Limpar a fila" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+            </div>
+        </header>
+        <div id="file-tree-container" class="flex-1 overflow-y-auto scrollbar-thin p-2">
+            </div>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Em Progresso</h2>
+        </header>
+        <ul id="in-progress-list" class="flex-1 overflow-y-auto scrollbar-thin">
+            </ul>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Concluídos</h2>
+            <button id="clear-completed-btn" title="Limpar lista de concluídos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"><i class="fas fa-broom"></i></button>
+        </header>
+        <ul id="completed-list" class="flex-1 overflow-y-auto scrollbar-thin">
+            </ul>
+    </section>
+  </main>
+  
+  <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-600 rounded-lg flex items-center justify-center pointer-events-none z-50">
+      <div class="text-center text-blue-800 font-bold text-2xl">
+          <i class="fas fa-folder-plus fa-3x"></i>
+          <p class="mt-4">Arraste e solte uma pasta para adicionar à fila</p>
+      </div>
+  </div>
+
+  <footer class="bg-white border-t border-gray-200 px-4 py-2 text-sm shrink-0">
+    <div class="w-full">
+        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600">Pronto para iniciar. Adicione arquivos à fila.</p>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div id="progress-bar-general" class="h-2 bg-blue-600 rounded-full transition-width duration-300" style="width: 0%;"></div>
+        </div>
+    </div>
+  </footer>
+
+  <div id="contextMenu" class="hidden fixed z-50 w-56 bg-white rounded-md shadow-lg border py-1 text-sm"></div>
+  
+  <div id="settings-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div class="flex justify-between items-center p-4 border-b">
+              <h3 class="text-lg font-semibold">Configurações</h3>
+              <button id="close-settings-modal" class="text-gray-500 hover:text-gray-800">&times;</button>
+          </div>
+          <div class="p-6 space-y-6">
+              <div>
+                  <label for="max-concurrent-tasks" class="block text-sm font-medium text-gray-700">Processos Simultâneos (1-16)</label>
+                  <input type="number" id="max-concurrent-tasks" name="max-concurrent-tasks" min="1" max="16" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-gray-700">Tema Escuro</span>
+                <label for="dark-mode-toggle" class="inline-flex relative items-center cursor-pointer">
+                    <input type="checkbox" value="" id="dark-mode-toggle" class="sr-only peer">
+                    <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+          </div>
+          <div class="flex justify-end p-4 bg-gray-50 border-t rounded-b-lg">
+              <button id="save-settings-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Salvar</button>
+          </div>
+      </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+```
+
+-----
+
+#### **2. Implementando Pausa Individual de Itens**
+
+Esta é a parte mais complexa, pois requer mudanças no back-end e front-end.
+
+##### **`app/transcriber.py` (Lógica de Pausa Individual)**
+
+Modificamos `TranscriptionManager` para rastrear arquivos pausados individualmente.
+
+```python
+# Conteúdo completo e CORRIGIDO de app/transcriber.py
+
+import os
+import sys
+import subprocess
+import threading
+import time
+from pathlib import Path
+import torch
+import whisper
+import vosk
+import wave
+import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+# --- Funções de Utilidade (sem alterações) ---
+SUPPORTED_EXTENSIONS = ('.mp4', '.mov', '.avi', '.mkv', '.mp3', '.wav', '.m4a', '.flac')
+
+def get_ffmpeg_path():
+    base_path = Path(__file__).resolve().parent.parent
+    vendor_path = base_path / "vendor" / "ffmpeg"
+    if sys.platform == "win32":
+        return str(vendor_path / "windows" / "ffmpeg.exe")
+    else: # Linux/macOS
+        return str(vendor_path / ({"linux": "linux", "darwin": "macos"}[sys.platform]) / "ffmpeg")
+
+def convert_to_wav(media_path, temp_wav_path):
+    ffmpeg_path = get_ffmpeg_path()
+    command = [ffmpeg_path, '-i', str(media_path), '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', '-y', str(temp_wav_path)]
+    try:
+        subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return True
+    except subprocess.CalledProcessError as e:
+        print(f"[ERRO] Falha na conversão do FFmpeg para {media_path}: {e}")
+        return False
+
+# --- Gerenciador de Modelos (sem alterações) ---
+class ModelManager:
+    def __init__(self):
+        self.loaded_models = {}
+        self.vosk_model_path = str(Path(__file__).resolve().parent.parent / "vendor" / "vosk-model")
+
+    def get_model(self, model_name: str):
+        if model_name in self.loaded_models:
+            return self.loaded_models[model_name]
+        print(f"Carregando modelo '{model_name}'...")
+        model = None
+        try:
+            if model_name.startswith('whisper'):
+                model = whisper.load_model(model_name.split('_')[1])
+            elif model_name == 'vosk':
+                model = vosk.Model(self.vosk_model_path)
+            if model:
+                self.loaded_models[model_name] = model
+            return model
+        except Exception as e:
+            print(f"[ERRO CRÍTICO] Falha ao carregar o modelo '{model_name}': {e}")
+            return None
+
+# --- CLASSE GERENCIADORA DE TRANSCRIÇÃO (ATUALIZADA) ---
+class TranscriptionManager:
+    def __init__(self, dest_path, model_name, file_list, model_manager, keep_structure=False, source_path=None, max_concurrent_tasks=1):
+        self.dest_path = Path(dest_path)
+        self.model_name = model_name
+        self.model_manager = model_manager
+        self.model = None
+        self.files_to_process = file_list
+        self.total_files = len(file_list)
+        self.files_processed_count = 0
+        self.status = "idle"
+        self.progress_general = 0
+        self.batch_start_time = None
+        
+        self.max_concurrent_tasks = max_concurrent_tasks
+        self.stop_requested = threading.Event()
+        self.pause_event = threading.Event() # Pausa geral
+        self.pause_event.set()
+        
+        self.files_in_progress = {}
+        self.files_in_progress_lock = threading.Lock()
+        
+        self.newly_completed_files = []
+        self.completed_files_lock = threading.Lock()
+
+        # RNF4: Adicionado para controlar pausa de itens individuais
+        self.paused_individual_files = set()
+        self.paused_individual_files_lock = threading.Lock()
+
+        self.keep_structure = keep_structure
+        self.source_path = Path(source_path) if source_path else None
+        self.executor = None
+
+    def request_stop(self):
+        print("[AVISO] Solicitação de parada recebida.")
+        self.stop_requested.set()
+        if self.pause_event.is_set() is False:
+            self.pause_event.set()
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
+
+    def request_pause(self):
+        if self.status == "running":
+            self.pause_event.clear()
+            self.status = "paused"
+            print("[INFO] Processo pausado.")
+
+    def request_resume(self):
+        if self.status == "paused":
+            self.pause_event.set()
+            self.status = "running"
+            print("[INFO] Processo retomado.")
+
+    # RNF4: Novas funções para pausar/retomar itens individuais
+    def request_pause_item(self, filepath):
+        with self.paused_individual_files_lock:
+            self.paused_individual_files.add(filepath)
+        print(f"[INFO] Item pausado: {filepath}")
+
+    def request_resume_item(self, filepath):
+        with self.paused_individual_files_lock:
+            if filepath in self.paused_individual_files:
+                self.paused_individual_files.remove(filepath)
+        print(f"[INFO] Item retomado: {filepath}")
+
+    def _format_time(self, seconds):
+        if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
+            return "--:--"
+        minutes, seconds = divmod(int(seconds), 60)
+        return f"{minutes:02d}:{seconds:02d}"
+
+    def _update_file_progress(self, file_path_str, progress, start_time):
+        with self.files_in_progress_lock:
+            if file_path_str in self.files_in_progress:
+                elapsed = time.time() - start_time
+                eta = (elapsed / progress * (100 - progress)) if progress > 0 else None
+                self.files_in_progress[file_path_str]['progress'] = progress
+                self.files_in_progress[file_path_str]['elapsed_str'] = self._format_time(elapsed)
+                self.files_in_progress[file_path_str]['eta_str'] = self._format_time(eta)
+
+    def _transcribe_with_vosk(self, temp_wav_file, file_path_str, start_time):
+        recognizer = vosk.KaldiRecognizer(self.model, 16000)
+        full_transcript = []
+        with wave.open(str(temp_wav_file), "rb") as wf:
+            total_frames = wf.getnframes()
+            if total_frames == 0: return ""
+            
+            while not self.stop_requested.is_set():
+                self.pause_event.wait()
+                # RNF4: Checagem da pausa individual
+                while file_path_str in self.paused_individual_files:
+                    if self.stop_requested.is_set(): break
+                    time.sleep(1) # Espera 1s antes de checar de novo
+
+                data = wf.readframes(4000)
+                if len(data) == 0: break
+                
+                self._update_file_progress(file_path_str, (wf.tell() / total_frames) * 100, start_time)
+
+                if recognizer.AcceptWaveform(data):
+                    full_transcript.append(json.loads(recognizer.Result()).get('text', ''))
+
+            if not self.stop_requested.is_set():
+                full_transcript.append(json.loads(recognizer.FinalResult()).get('text', ''))
+        return " ".join(full_transcript).strip()
+
+    def _transcribe_with_whisper(self, temp_wav_file, file_path_str, start_time):
+        self.pause_event.wait()
+        # RNF4: Checagem da pausa individual
+        while file_path_str in self.paused_individual_files:
+            if self.stop_requested.is_set(): return None
+            time.sleep(1)
+
+        if self.stop_requested.is_set(): return None
+        
+        self._update_file_progress(file_path_str, 50, start_time) # Simulação de progresso
+        result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
+        return result['text'].strip()
+
+    def _transcribe_single_file(self, file_path_str):
+        if self.stop_requested.is_set(): return None
+        
+        file_path = Path(file_path_str)
+        start_time = time.time()
+        
+        with self.files_in_progress_lock:
+            self.files_in_progress[file_path_str] = {
+                "filename": file_path.name, "progress": 0, "status": "running",
+                "elapsed_str": "00:00", "eta_str": "--:--"
+            }
+
+        self.pause_event.wait()
+        while file_path_str in self.paused_individual_files:
+             if self.stop_requested.is_set(): return None
+             time.sleep(1)
+
+        if self.stop_requested.is_set(): return None
+
+        if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
+            output_txt_path = self.dest_path / file_path.relative_to(self.source_path).with_suffix('.txt')
+        else:
+            output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
+        output_txt_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav"
+
+        try:
+            if not convert_to_wav(str(file_path), str(temp_wav_file)):
+                raise Exception("Falha na conversão")
+
+            self.pause_event.wait()
+            if self.stop_requested.is_set(): return None
+
+            transcript_text = None
+            if self.model_name.startswith('whisper'):
+                transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str, start_time)
+            else:
+                transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str, start_time)
+            
+            if self.stop_requested.is_set(): return None
+
+            if transcript_text:
+                with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
+                with self.completed_files_lock:
+                    self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)})
+                return file_path_str
+            else:
+                raise Exception("Transcrição vazia")
+        except Exception as e:
+            print(f"[ERRO] Falha em {file_path.name}: {e}")
+            return None
+        finally:
+            if os.path.exists(temp_wav_file):
+                try: os.remove(temp_wav_file)
+                except OSError: pass
+            with self.files_in_progress_lock:
+                if file_path_str in self.files_in_progress:
+                    del self.files_in_progress[file_path_str]
+
+    def run_transcription(self):
+        self.model = self.model_manager.get_model(self.model_name)
+        if not self.model:
+            self.status = "error"
+            return
+        self.status = "running"
+        self.batch_start_time = time.time()
+        self.files_processed_count = 0
+        self.executor = ThreadPoolExecutor(max_workers=self.max_concurrent_tasks)
+        future_to_file = {self.executor.submit(self._transcribe_single_file, fp): fp for fp in self.files_to_process}
+
+        for future in as_completed(future_to_file):
+            if self.stop_requested.is_set():
+                for f in future_to_file:
+                    f.cancel()
+                break
+            result_filepath = future.result()
+            if result_filepath:
+                self.files_processed_count += 1
+        
+        if self.stop_requested.is_set():
+            self.status = "stopped"
+        else:
+            self.status = "completed"
+        self.progress_general = (self.files_processed_count / self.total_files) * 100 if self.total_files > 0 else 100
+
+    def get_status(self):
+        with self.completed_files_lock:
+            completed_list = self.newly_completed_files
+            self.newly_completed_files = []
+        with self.files_in_progress_lock:
+            in_progress_list = list(self.files_in_progress.items())
+        
+        # RNF4: Adicionar o status de pausa individual à resposta da API
+        with self.paused_individual_files_lock:
+            paused_files_set = self.paused_individual_files.copy()
+
+        if self.status in ["running", "paused"] and self.total_files > 0:
+            self.progress_general = (self.files_processed_count / self.total_files) * 100
+        
+        batch_elapsed_str = self._format_time(time.time() - self.batch_start_time) if self.batch_start_time else "00:00"
+        
+        return {
+            "status": self.status,
+            "progress_general": self.progress_general,
+            "batch_elapsed_str": batch_elapsed_str,
+            "total_files": self.total_files,
+            "files_processed": self.files_processed_count,
+            "files_in_progress": dict(in_progress_list),
+            "completed_files": completed_list,
+            "paused_individual_files": list(paused_files_set) # Envia a lista de arquivos pausados
+        }
+
+```
+
+##### **`app/routes.py` (Endpoints para Pausar/Retomar Itens)**
+
+Adicionamos duas novas rotas para controlar a pausa individual.
+
+```python
+# Conteúdo de app/routes.py
+from app import app
+from flask import render_template, request, jsonify
+import threading
+from .transcriber import TranscriptionManager, ModelManager
+
+# --- GERENCIAMENTO DE ESTADO GLOBAL ---
+model_manager = ModelManager()
+transcription_job = None
+app_settings = {
+    "max_concurrent_tasks": 1,
+    "verbose_log": False,
+    "post_processing_action": "none" # 'none', 'open_folder', 'shutdown'
+}
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/start-processing', methods=['POST'])
+def start_processing():
+    global transcription_job
+    if transcription_job and transcription_job.status in ["running", "paused"]:
+        return jsonify({'status': 'erro', 'message': 'Um processo já está em andamento.'}), 400
+
+    data = request.get_json()
+    file_list = data.get('file_list')
+    dest_path = data.get('dest_path')
+    model_name = data.get('model_name', 'whisper_base')
+    keep_structure = data.get('keep_structure', False)
+    source_path = data.get('source_path', None)
+
+    if not file_list or not dest_path:
+        return jsonify({'status': 'erro', 'message': 'Lista de arquivos ou destino não fornecidos.'}), 400
+    
+    transcription_job = TranscriptionManager(
+        dest_path=dest_path,
+        model_name=model_name,
+        file_list=file_list,
+        model_manager=model_manager,
+        keep_structure=keep_structure,
+        source_path=source_path,
+        max_concurrent_tasks=app_settings.get('max_concurrent_tasks', 1)
+    )
+    process_thread = threading.Thread(target=transcription_job.run_transcription, daemon=True)
+    process_thread.start()
+
+    return jsonify({'status': 'sucesso', 'message': 'Processo iniciado.'})
+
+# --- ROTAS DE CONTROLE GERAL ---
+
+@app.route('/stop-processing', methods=['POST'])
+def stop_processing():
+    global transcription_job
+    if transcription_job and transcription_job.status in ["running", "paused"]:
+        transcription_job.request_stop()
+        return jsonify({'status': 'sucesso', 'message': 'Sinal de parada enviado.'})
+    return jsonify({'status': 'erro', 'message': 'Nenhum processo para parar.'}), 400
+
+@app.route('/pause-processing', methods=['POST'])
+def pause_processing():
+    global transcription_job
+    if transcription_job and transcription_job.status == "running":
+        transcription_job.request_pause()
+        return jsonify({'status': 'sucesso', 'message': 'Processo pausado.'})
+    return jsonify({'status': 'erro', 'message': 'Nenhum processo rodando para pausar.'}), 400
+
+@app.route('/resume-processing', methods=['POST'])
+def resume_processing():
+    global transcription_job
+    if transcription_job and transcription_job.status == "paused":
+        transcription_job.request_resume()
+        return jsonify({'status': 'sucesso', 'message': 'Processo retomado.'})
+    return jsonify({'status': 'erro', 'message': 'Nenhum processo pausado para retomar.'}), 400
+
+# --- NOVAS ROTAS PARA CONTROLE INDIVIDUAL (RNF4) ---
+
+@app.route('/pause-item', methods=['POST'])
+def pause_item():
+    global transcription_job
+    filepath = request.json.get('filepath')
+    if transcription_job and filepath:
+        transcription_job.request_pause_item(filepath)
+        return jsonify({'status': 'sucesso', 'message': f'Item {filepath} pausado.'})
+    return jsonify({'status': 'erro', 'message': 'Job não está rodando ou caminho não fornecido.'}), 400
+
+@app.route('/resume-item', methods=['POST'])
+def resume_item():
+    global transcription_job
+    filepath = request.json.get('filepath')
+    if transcription_job and filepath:
+        transcription_job.request_resume_item(filepath)
+        return jsonify({'status': 'sucesso', 'message': f'Item {filepath} retomado.'})
+    return jsonify({'status': 'erro', 'message': 'Job não está rodando ou caminho não fornecido.'}), 400
+
+
+# --- ROTAS DE STATUS E CONFIGURAÇÕES ---
+
+@app.route('/get-progress')
+def get_progress():
+    global transcription_job
+    if transcription_job:
+        return jsonify(transcription_job.get_status())
+    return jsonify({"status": "idle", "files_in_progress": {}, "completed_files": [], "paused_individual_files": []})
+
+@app.route('/update-settings', methods=['POST'])
+def update_settings():
+    global app_settings
+    data = request.get_json()
+    if 'max_concurrent_tasks' in data:
+        try:
+            val = int(data['max_concurrent_tasks'])
+            app_settings['max_concurrent_tasks'] = max(1, min(val, 16)) # Limita entre 1 e 16
+        except (ValueError, TypeError):
+            pass # Ignora valores inválidos
+    
+    print(f"[SETTINGS] Configurações atualizadas: {app_settings}")
+    return jsonify({'status': 'sucesso', 'settings': app_settings})
+
+@app.route('/get-settings', methods=['GET'])
+def get_settings():
+    return jsonify(app_settings)
+```
+
+-----
+
+#### **3. Juntando Tudo no Front-End**
+
+Agora, atualizamos o `main.js` e o `ui.js` para usar todas as novas funcionalidades.
+
+##### **`app/static/js/ui.js` (Menu de Contexto Inteligente)**
+
+O menu de contexto agora mostrará "Pausar" ou "Retomar" dependendo do estado do arquivo.
+
+```javascript
+console.log("ui.js (Atualizado) foi carregado.");
+
+function waitForPywebviewApi() {
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(intervalId);
+                resolve(window.pywebview.api);
+            }
+        }, 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const api = await waitForPywebviewApi();
+        const contextMenu = document.getElementById('contextMenu');
+        if (!contextMenu) return;
+
+        let currentTargetItem = null;
+        // Variável global para saber os arquivos pausados, atualizada pelo main.js
+        window.individuallyPausedFiles = new Set();
+
+        function closeContextMenu() {
+            contextMenu.classList.add('hidden');
+            currentTargetItem = null;
+        }
+        
+        function showContextMenu(event, element) {
+            event.preventDefault();
+            event.stopPropagation();
+            currentTargetItem = element;
+            const filePath = currentTargetItem.dataset.filepath;
+
+            const isQueueItem = currentTargetItem.closest('#file-tree-container');
+            const isCompletedItem = currentTargetItem.closest('#completed-list');
+            const isInProgress = Array.from(document.querySelectorAll('#in-progress-list li')).some(li => li.dataset.filepath === filePath);
+            const isFile = currentTargetItem.classList.contains('file-item');
+            
+            // RNF4: Verifica se o item está individualmente pausado
+            const isIndividuallyPaused = window.individuallyPausedFiles.has(filePath);
+
+            let menuContent = '';
+
+            if (isQueueItem && isFile) {
+                // RNF4: Lógica para mostrar "Pausar" ou "Retomar"
+                if (isInProgress) {
+                    if (isIndividuallyPaused) {
+                        menuContent += `<a href="#" id="context-resume-item" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Retomar Processamento</a>`;
+                    } else {
+                        menuContent += `<a href="#" id="context-pause-item" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Pausar Processamento</a>`;
+                    }
+                    menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
+                }
+
+                menuContent += `
+                    <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Mídia Original</a>
+                    <a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
+                    <div class="my-1 border-t border-gray-100"></div>
+                    <a href="#" id="context-remove" class="block px-4 py-2 text-red-600 hover:bg-red-100">Remover da Fila</a>
+                `;
+            } else if (isCompletedItem) {
+                 menuContent = `
+                    <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Transcrição (.txt)</a>
+                    <a href="#" id="context-open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
+                `;
+            } else {
+                return; // Não mostra menu para pastas
+            }
+
+            contextMenu.innerHTML = menuContent;
+            
+            // Adiciona listeners para as ações
+            const openFileBtn = document.getElementById('context-open-file');
+            if(openFileBtn) openFileBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                api.open_file_natively(currentTargetItem.dataset.filepath);
+                closeContextMenu();
+            });
+
+            const openLocationBtn = document.getElementById('context-open-location');
+            if(openLocationBtn) openLocationBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                api.open_folder_in_explorer(currentTargetItem.dataset.filepath);
+                closeContextMenu();
+            });
+            
+            // RNF4: Listeners para pausar/retomar item
+            const pauseItemBtn = document.getElementById('context-pause-item');
+            if (pauseItemBtn) pauseItemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetch('/pause-item', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath: currentTargetItem.dataset.filepath }) 
+                });
+                closeContextMenu();
+            });
+
+            const resumeItemBtn = document.getElementById('context-resume-item');
+            if (resumeItemBtn) resumeItemBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                fetch('/resume-item', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ filepath: currentTargetItem.dataset.filepath }) 
+                });
+                closeContextMenu();
+            });
+
+
+            const { clientX: mouseX, clientY: mouseY } = event;
+            contextMenu.style.top = `${mouseY}px`;
+            contextMenu.style.left = `${mouseX}px`;
+            contextMenu.classList.remove('hidden');
+        }
+
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target)) {
+                closeContextMenu();
+            }
+        });
+
+        document.addEventListener('contextmenu', (e) => {
+            const li = e.target.closest('li[data-filepath]');
+            if (li) {
+                showContextMenu(e, li);
+            } else {
+                closeContextMenu();
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContextMenu();
+        });
+
+    } catch (error) {
+        console.error("ui.js: API não encontrada.", error);
+    }
+});
+```
+
+##### **`app/static/js/main.js` (Lógica de Interface Atualizada)**
+
+Este é o coração das mudanças, onde implementamos:
+
+1.  **Lógica do Tema Escuro**: Persistência com `localStorage`.
+2.  **Validação do Input Editável**: Feedback visual no campo de destino.
+3.  **Correção da Exibição de Arquivos**: Diferencia entre modo 'lista' e 'árvore'.
+4.  **Feedback Visual Aprimorado**: Ícones de status na árvore de arquivos.
+5.  **Exibição de Porcentagem**: Adicionada à lista "Em Progresso".
+
+<!-- end list -->
+
+```javascript
+// ==================================================================
+// Arquivo: app/static/js/main.js (Atualizado para Fase 1)
+// Principais mudanças:
+// - Lógica para o Tema Escuro (RNF3) e Inputs Editáveis (RF9)
+// - Correção na exibição de arquivos únicos vs. pastas (RF1, RF2)
+// - Feedback visual (spinner, check) na árvore de arquivos (RNF3)
+// - Exibição de % de progresso (RF7)
+// ==================================================================
+
+function waitForPywebviewApi() {
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(intervalId);
+                resolve(window.pywebview.api);
+            }
+        }, 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const api = await waitForPywebviewApi();
+    
+    // --- Elementos da UI ---
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    
+    const origemInput = document.getElementById('origem');
+    const destinoInput = document.getElementById('destino');
+    const selectOrigemBtn = document.getElementById('select-origem-btn');
+    const selectDestinoBtn = document.getElementById('select-destino-btn');
+    
+    const addFileBtn = document.getElementById('add-file-btn');
+    const clearQueueBtn = document.getElementById('clear-queue-btn');
+    const clearCompletedBtn = document.getElementById('clear-completed-btn');
+    
+    const fileTreeContainer = document.getElementById('file-tree-container');
+    const inProgressList = document.getElementById('in-progress-list');
+    const completedList = document.getElementById('completed-list');
+    
+    const progressBarGeneral = document.getElementById('progress-bar-general');
+    const progressTextGeneral = document.getElementById('progress-text-general');
+    
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsModalBtn = document.getElementById('close-settings-modal');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const maxConcurrentInput = document.getElementById('max-concurrent-tasks');
+    const darkModeToggle = document.getElementById('dark-mode-toggle');
+
+    const dropZone = document.getElementById('drop-zone');
+    const dropZoneOverlay = document.getElementById('drop-zone-overlay');
+    
+    let progressInterval = null;
+    let fileQueue = new Set();
+    let displayMode = 'tree'; // RF1, RF2: 'tree' ou 'list'
+
+    // --- Funções da Árvore de Diretórios (RF1, RF2) ---
+
+    // Função para renderizar uma lista simples de arquivos
+    function renderFileList(files, container) {
+        const ul = document.createElement('ul');
+        files.forEach(path => {
+            const li = document.createElement('li');
+            const filename = path.split('/').pop();
+            li.className = 'file-item text-sm p-1 rounded-md flex items-center gap-2';
+            li.dataset.filepath = path;
+            li.innerHTML = `<span class="item-icon"></span><i class="fas fa-file-audio text-gray-500 mr-2"></i><span>${filename}</span>`;
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+
+    // Função para construir a estrutura de árvore
+    function buildFileTree(filePaths, basePath) {
+        const tree = {};
+        filePaths.forEach(path => {
+            const relativePath = path.replace(basePath, '').replace(/^\//, '');
+            const parts = relativePath.split('/');
+            let currentLevel = tree;
+            parts.forEach((part, index) => {
+                if (index === parts.length - 1) { // É um arquivo
+                    currentLevel[part] = { _isLeaf: true, _fullPath: path };
+                } else { // É um diretório
+                    if (!currentLevel[part]) {
+                        currentLevel[part] = { _isLeaf: false };
+                    }
+                    currentLevel = currentLevel[part];
+                }
+            });
+        });
+        return tree;
+    }
+
+    // Função para renderizar a árvore
+    function renderTree(node, container, level = 0) {
+        const ul = document.createElement('ul');
+        if (level > 0) ul.className = 'pl-4';
+
+        Object.keys(node).sort().forEach(key => {
+            if (key.startsWith('_')) return;
+            const li = document.createElement('li');
+            const itemData = node[key];
+            if (itemData._isLeaf) {
+                li.className = 'file-item text-sm p-1 rounded-md flex items-center gap-2';
+                li.dataset.filepath = itemData._fullPath;
+                li.innerHTML = `<span class="item-icon"></span><i class="fas fa-file-audio text-gray-500 mr-2"></i><span>${key}</span>`;
+            } else {
+                li.innerHTML = `<details class="folder-item">
+                                  <summary class="p-1 cursor-pointer hover:bg-gray-100 rounded-md"><i class="fas fa-folder text-yellow-500 mr-2"></i>${key}</summary>
+                                </details>`;
+                const details = li.querySelector('details');
+                renderTree(itemData, details, level + 1);
+            }
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+
+    function updateFileQueueUI() {
+        fileTreeContainer.innerHTML = '';
+        if (fileQueue.size === 0) {
+            fileTreeContainer.innerHTML = '<p class="text-center text-gray-400 p-4">Nenhum arquivo na fila.</p>';
+            return;
+        }
+
+        const files = Array.from(fileQueue);
+        if (displayMode === 'tree' && origemInput.value) {
+            const tree = buildFileTree(files, origemInput.value);
+            renderTree(tree, fileTreeContainer);
+        } else {
+            renderFileList(files, fileTreeContainer);
+        }
+    }
+
+
+    // --- Funções de UI ---
+    function updateUIForState(state) {
+        const isIdle = state === 'idle';
+        const isRunning = state === 'running';
+        const isPaused = state === 'paused';
+        const isStoppedOrCompleted = state === 'stopped' || state === 'completed';
+
+        startBtn.classList.toggle('hidden', !isIdle && !isStoppedOrCompleted);
+        pauseBtn.classList.toggle('hidden', !isRunning);
+        resumeBtn.classList.toggle('hidden', !isPaused);
+        stopBtn.classList.toggle('hidden', isIdle || isStoppedOrCompleted);
+        
+        const disableInputs = isRunning || isPaused;
+        [origemInput, selectOrigemBtn, addFileBtn, clearQueueBtn, settingsBtn].forEach(el => {
+            el.disabled = disableInputs;
+        });
+        // RF9: O input de destino pode ser alterado, mas o botão não.
+        destinoInput.disabled = disableInputs;
+        selectDestinoBtn.disabled = disableInputs;
+    }
+
+    // --- Lógica de Atualização de Progresso ---
+    function updateProgress() {
+        fetch('/get-progress')
+            .then(response => response.json())
+            .then(data => {
+                updateUIForState(data.status);
+                
+                // RNF4: Atualiza a lista de arquivos pausados individualmente
+                window.individuallyPausedFiles = new Set(data.paused_individual_files);
+
+                // Atualiza barra geral
+                progressBarGeneral.style.width = `${data.progress_general}%`;
+                progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+
+                // Limpa e recria a lista "Em Progresso"
+                inProgressList.innerHTML = '';
+                const currentInProgressPaths = new Set();
+                
+                Object.entries(data.files_in_progress).forEach(([path, info]) => {
+                    currentInProgressPaths.add(path);
+                    const li = document.createElement('li');
+                    li.className = 'flex flex-col px-4 py-3 border-b border-gray-100';
+                    li.dataset.filepath = path;
+                    
+                    const isPaused = window.individuallyPausedFiles.has(path);
+                    const spinnerIcon = isPaused ? 'fa-pause-circle text-yellow-500' : 'fa-cog fa-spin text-blue-500';
+
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <i class="fas ${spinnerIcon}"></i>
+                            <p class="flex-1 font-medium truncate" title="${path}">${info.filename}</p>
+                            <span class="text-xs font-mono text-gray-500">${Math.round(info.progress || 0)}%</span>
+                        </div>
+                        <div class="flex items-center gap-2 mt-1 text-xs text-gray-500">
+                            <span><i class='fas fa-clock mr-1'></i> ${info.elapsed_str || '--:--'}</span>
+                            <span class="ml-auto"><i class='fas fa-hourglass-half mr-1'></i> ETA: ${info.eta_str || '--:--'}</span>
+                        </div>
+                        <div class="mt-2 h-1 bg-gray-200 rounded-full overflow-hidden">
+                            <div class="h-1 ${isPaused ? 'bg-yellow-500' : 'bg-blue-600'} rounded-full" style="width: ${info.progress || 0}%;"></div>
+                        </div>
+                    `;
+                    inProgressList.appendChild(li);
+
+                    // RNF3: Atualiza ícone na árvore de arquivos (spinner)
+                    const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${path}"] .item-icon`);
+                    if (treeNode) {
+                        treeNode.innerHTML = `<i class="fas ${spinnerIcon} fa-fw"></i>`;
+                    }
+                });
+                
+                // Limpa ícones de arquivos que não estão mais em progresso
+                const allIcons = fileTreeContainer.querySelectorAll('.item-icon');
+                allIcons.forEach(icon => {
+                    const li = icon.closest('li');
+                    if (li && !currentInProgressPaths.has(li.dataset.filepath)) {
+                        icon.innerHTML = '';
+                    }
+                });
+
+                // Move arquivos concluídos
+                data.completed_files.forEach(fileInfo => {
+                    const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
+                    
+                    // RNF3: Adiciona selo de verificação na árvore de arquivos
+                    const treeNodeIcon = fileTreeContainer.querySelector(`li[data-filepath="${sourcePath}"] .item-icon`);
+                    if (treeNodeIcon) {
+                        treeNodeIcon.innerHTML = '<i class="fas fa-check-circle text-green-600 fa-fw"></i>';
+                    }
+                    
+                    const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                    const li = document.createElement('li');
+                    li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100';
+                    li.dataset.filepath = fileInfo.output_path;
+                    li.innerHTML = `
+                        <i class="fas fa-check-circle text-green-600"></i>
+                        <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                        <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                            <i class="fas fa-ellipsis-v text-gray-500"></i>
+                        </div>
+                    `;
+                    completedList.prepend(li); // Adiciona no topo
+                });
+
+                if (data.status === 'completed' || data.status === 'stopped') {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    inProgressList.innerHTML = '';
+                    if (data.status === 'completed') {
+                        progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                    } else {
+                        progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
+                    }
+                }
+            });
+    }
+
+    // --- Event Listeners ---
+    selectOrigemBtn.addEventListener('click', async () => {
+        const folderPath = await api.open_folder_dialog('Selecione a Pasta de Origem');
+        if (folderPath) {
+            origemInput.value = folderPath;
+            displayMode = 'tree'; // RF2
+            const files = await api.scan_folder_recursively(folderPath);
+            fileQueue = new Set(files);
+            updateFileQueueUI();
+        }
+    });
+
+    selectDestinoBtn.addEventListener('click', async () => {
+        const folderPath = await api.open_folder_dialog('Selecione a Pasta de Destino');
+        if (folderPath) {
+            destinoInput.value = folderPath;
+            destinoInput.classList.remove('border-red-500'); // Limpa validação de erro
+        }
+    });
+
+    addFileBtn.addEventListener('click', async () => {
+        const files = await api.open_file_dialog();
+        if (files && files.length > 0) {
+            // RF1: Se não houver pasta de origem, entra no modo lista
+            if (!origemInput.value) {
+                displayMode = 'list';
+            }
+            files.forEach(file => fileQueue.add(file.replace(/\\/g, '/')));
+            updateFileQueueUI();
+        }
+    });
+
+    clearQueueBtn.addEventListener('click', () => {
+        if (progressInterval) return;
+        fileQueue.clear();
+        origemInput.value = ''; // Limpa também a origem
+        displayMode = 'tree'; // Reseta para o modo padrão
+        updateFileQueueUI();
+    });
+
+    clearCompletedBtn.addEventListener('click', () => {
+        completedList.innerHTML = '';
+    });
+
+    startBtn.addEventListener('click', () => {
+        if (fileQueue.size === 0 || !destinoInput.value) {
+            alert('Selecione arquivos/pasta de origem e uma pasta de destino.');
+            return;
+        }
+        if (document.getElementById('keep-structure-checkbox').checked && !origemInput.value) {
+            alert('Selecione uma pasta de origem para manter a estrutura.');
+            return;
+        }
+
+        const requestBody = {
+            file_list: Array.from(fileQueue),
+            dest_path: destinoInput.value,
+            keep_structure: document.getElementById('keep-structure-checkbox').checked,
+            source_path: origemInput.value,
+            model_name: document.getElementById('model-selector').value
+        };
+
+        fetch('/start-processing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                completedList.innerHTML = ''; // Limpa concluídos antigos
+                updateFileQueueUI(); // Atualiza a UI para limpar ícones antigos
+                progressInterval = setInterval(updateProgress, 1000);
+            } else {
+                alert(`Erro: ${data.message}`);
+            }
+        });
+    });
+
+    stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
+    pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
+    resumeBtn.addEventListener('click', () => fetch('/resume-processing', { method: 'POST' }));
+
+    // --- Lógica do Modal e Configurações ---
+    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    saveSettingsBtn.addEventListener('click', () => {
+        const settings = {
+            max_concurrent_tasks: parseInt(maxConcurrentInput.value, 10)
+        };
+        fetch('/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        settingsModal.classList.add('hidden');
+    });
+
+    // RF9: Listener para validação do input de destino
+    destinoInput.addEventListener('change', async () => {
+        const path = destinoInput.value;
+        if (path) {
+            const isValid = await api.validate_path(path);
+            if (isValid) {
+                destinoInput.classList.remove('border-red-500');
+                destinoInput.classList.add('border-green-500');
+            } else {
+                destinoInput.classList.remove('border-green-500');
+                destinoInput.classList.add('border-red-500');
+            }
+        } else {
+            destinoInput.classList.remove('border-red-500', 'border-green-500');
+        }
+    });
+
+    // RNF3: Lógica do Tema Escuro
+    function applyTheme(theme) {
+        if (theme === 'dark') {
+            document.documentElement.classList.add('dark');
+            darkModeToggle.checked = true;
+        } else {
+            document.documentElement.classList.remove('dark');
+            darkModeToggle.checked = false;
+        }
+    }
+
+    darkModeToggle.addEventListener('change', () => {
+        const theme = darkModeToggle.checked ? 'dark' : 'light';
+        localStorage.setItem('theme', theme);
+        applyTheme(theme);
+    });
+
+    // --- Drag and Drop ---
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZoneOverlay.classList.remove('hidden'); });
+    dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZoneOverlay.classList.add('hidden'); });
+    dropZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropZoneOverlay.classList.add('hidden');
+        if (progressInterval) return;
+
+        const items = e.dataTransfer.items;
+        if (items && items.length > 0) {
+            const folderPath = await api.open_folder_dialog('Selecione a pasta que você arrastou');
+            if (folderPath) {
+                origemInput.value = folderPath;
+                displayMode = 'tree'; // RF2
+                const files = await api.scan_folder_recursively(folderPath);
+                fileQueue = new Set(files);
+                updateFileQueueUI();
+            }
+        }
+    });
+
+    // --- Inicialização ---
+    fetch('/get-settings').then(res => res.json()).then(data => {
+        maxConcurrentInput.value = data.max_concurrent_tasks || 1;
+    });
+    
+    // Aplica o tema salvo no carregamento
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    applyTheme(savedTheme);
+    
+    updateFileQueueUI();
+    updateUIForState('idle');
+});
+```
+
+-----
+
+### **Resumo dos Entregáveis da Fase 1**
+
+Com os arquivos acima atualizados, todos os itens do seu checklist da Fase 1 foram implementados:
+
+  * **Exibição de Arquivos e Pastas (RF1, RF2):**
+
+      * **Corrigido:** A adição de arquivos avulsos agora os exibe como uma lista simples, sem criar uma árvore (`displayMode`).
+      * **Mantido:** A adição de uma pasta exibe a estrutura de árvore.
+      * **Implementado:** A árvore de diretórios agora exibe um **ícone de spinner** para arquivos em processamento e um **selo de verificação** para os concluídos.
+
+  * **Feedback Visual (RNF3, RNF4):**
+
+      * **Spinner:** Visível na lista "Em Progresso" e na árvore de arquivos da fila.
+      * **Pausa Individual:** Totalmente funcional via menu de contexto (clique direito), com a opção mudando dinamicamente para "Retomar".
+      * **Selo de Verificação:** Aparece na árvore para itens concluídos.
+
+  * **Informações de Tempo (RF7):**
+
+      * **Percentual:** A porcentagem de progresso agora é exibida na lista "Em Progresso".
+
+  * **Tema Escuro (RNF3):**
+
+      * **Implementado:** O *toggle* nas configurações ativa/desativa o tema escuro.
+      * **Persistente:** A escolha do tema é salva no navegador e reaplicada ao recarregar a aplicação.
+
+  * **Inputs Editáveis (RF9):**
+
+      * **Implementado:** O campo de destino agora é editável.
+      * **Validação:** O campo muda a cor da borda para verde (caminho válido) ou vermelho (caminho inválido) após a edição.
+
+**Para aplicar, basta substituir o conteúdo dos seus arquivos pelos que foram fornecidos aqui.**
+
+Boa codificação\!

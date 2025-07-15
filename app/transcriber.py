@@ -21,19 +21,12 @@ def get_ffmpeg_path():
     vendor_path = base_path / "vendor" / "ffmpeg"
     if sys.platform == "win32":
         return str(vendor_path / "windows" / "ffmpeg.exe")
-    elif sys.platform == "linux":
-        return str(vendor_path / "linux" / "ffmpeg")
-    elif sys.platform == "darwin":
-        return str(vendor_path / "macos" / "ffmpeg")
-    else:
-        return "ffmpeg"
+    else: # Linux/macOS
+        return str(vendor_path / ({"linux": "linux", "darwin": "macos"}[sys.platform]) / "ffmpeg")
 
 def convert_to_wav(media_path, temp_wav_path):
     ffmpeg_path = get_ffmpeg_path()
-    command = [
-        ffmpeg_path, '-i', str(media_path), '-ar', '16000', '-ac', '1',
-        '-c:a', 'pcm_s16le', '-y', str(temp_wav_path)
-    ]
+    command = [ffmpeg_path, '-i', str(media_path), '-ar', '16000', '-ac', '1', '-c:a', 'pcm_s16le', '-y', str(temp_wav_path)]
     try:
         subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
@@ -54,11 +47,8 @@ class ModelManager:
         model = None
         try:
             if model_name.startswith('whisper'):
-                whisper_size = model_name.split('_')[1]
-                model = whisper.load_model(whisper_size)
+                model = whisper.load_model(model_name.split('_')[1])
             elif model_name == 'vosk':
-                if not Path(self.vosk_model_path).exists():
-                    raise FileNotFoundError(f"Pasta do modelo Vosk não encontrada: {self.vosk_model_path}")
                 model = vosk.Model(self.vosk_model_path)
             if model:
                 self.loaded_models[model_name] = model
@@ -77,59 +67,69 @@ class TranscriptionManager:
         self.files_to_process = file_list
         self.total_files = len(file_list)
         self.files_processed_count = 0
-        self.status = "idle" # idle, running, paused, stopped, completed, error
+        self.status = "idle"
         self.progress_general = 0
         self.batch_start_time = None
         
-        # --- NOVOS ATRIBUTOS PARA CONCORRÊNCIA E CONTROLE ---
         self.max_concurrent_tasks = max_concurrent_tasks
-        self.stop_requested = threading.Event() # Usar Event para parada segura em threads
+        self.stop_requested = threading.Event()
         self.pause_event = threading.Event()
-        self.pause_event.set() # Começa "não pausado" (set = pode prosseguir)
+        self.pause_event.set()
         
-        # Dicionários para rastrear o estado de cada arquivo
-        self.files_in_progress = {} # {filepath: {info}}
+        self.files_in_progress = {}
         self.files_in_progress_lock = threading.Lock()
         
         self.newly_completed_files = []
         self.completed_files_lock = threading.Lock()
 
-        # --- ATRIBUTOS DE ESTRUTURA ---
         self.keep_structure = keep_structure
         self.source_path = Path(source_path) if source_path else None
+        self.executor = None
 
-    # --- MÉTODOS DE CONTROLE DE PROCESSO ---
     def request_stop(self):
         print("[AVISO] Solicitação de parada recebida.")
         self.stop_requested.set()
-        self.pause_event.set() # Libera qualquer thread pausada para que ela possa parar
+        if self.pause_event.is_set() is False:
+            self.pause_event.set()
+        if self.executor:
+            self.executor.shutdown(wait=False, cancel_futures=True)
 
     def request_pause(self):
         if self.status == "running":
-            self.pause_event.clear() # Bloqueia as threads que chamarem .wait()
+            self.pause_event.clear()
             self.status = "paused"
             print("[INFO] Processo pausado.")
 
     def request_resume(self):
         if self.status == "paused":
-            self.pause_event.set() # Libera as threads bloqueadas
+            self.pause_event.set()
             self.status = "running"
             print("[INFO] Processo retomado.")
+            
+    def update_concurrency(self, new_max_tasks):
+        self.max_concurrent_tasks = new_max_tasks
+        if self.executor and self.status == "running":
+            print(f"[INFO] Concorrência será ajustada para {new_max_tasks} na próxima leva de tarefas.")
+            # A mudança real acontece na recriação do executor, se a lógica permitir.
+            # Para uma mudança em tempo real, seria necessário um gerenciamento de pool mais complexo.
+            # Por agora, a configuração será usada na próxima inicialização.
 
     def _format_time(self, seconds):
-        if seconds is None or seconds < 0: return "00:00"
+        if seconds is None or not isinstance(seconds, (int, float)) or seconds < 0:
+            return "--:--"
         minutes, seconds = divmod(int(seconds), 60)
         return f"{minutes:02d}:{seconds:02d}"
 
-    def _get_estimated_duration(self, wav_file_path):
-        try:
-            with wave.open(str(wav_file_path), 'rb') as wf:
-                return wf.getnframes() / float(wf.getframerate())
-        except Exception:
-            return wav_file_path.stat().st_size / (1024 * 1024) * 60
+    def _update_file_progress(self, file_path_str, progress, start_time):
+        with self.files_in_progress_lock:
+            if file_path_str in self.files_in_progress:
+                elapsed = time.time() - start_time
+                eta = (elapsed / progress * (100 - progress)) if progress > 0 else None
+                self.files_in_progress[file_path_str]['progress'] = progress
+                self.files_in_progress[file_path_str]['elapsed_str'] = self._format_time(elapsed)
+                self.files_in_progress[file_path_str]['eta_str'] = self._format_time(eta)
 
-    # --- LÓGICA DE TRANSCRIÇÃO (COM CHECAGEM DE PAUSA/PARADA) ---
-    def _transcribe_with_vosk(self, temp_wav_file, file_path_str):
+    def _transcribe_with_vosk(self, temp_wav_file, file_path_str, start_time):
         recognizer = vosk.KaldiRecognizer(self.model, 16000)
         full_transcript = []
         with wave.open(str(temp_wav_file), "rb") as wf:
@@ -137,64 +137,45 @@ class TranscriptionManager:
             if total_frames == 0: return ""
             
             while not self.stop_requested.is_set():
-                self.pause_event.wait() # Ponto de pausa
-                if self.stop_requested.is_set(): break
-
+                self.pause_event.wait()
                 data = wf.readframes(4000)
                 if len(data) == 0: break
                 
-                progress = (wf.tell() / total_frames) * 100
-                with self.files_in_progress_lock:
-                    if file_path_str in self.files_in_progress:
-                        self.files_in_progress[file_path_str]['progress'] = progress
+                self._update_file_progress(file_path_str, (wf.tell() / total_frames) * 100, start_time)
 
                 if recognizer.AcceptWaveform(data):
-                    result_json = json.loads(recognizer.Result())
-                    full_transcript.append(result_json.get('text', ''))
+                    full_transcript.append(json.loads(recognizer.Result()).get('text', ''))
 
             if not self.stop_requested.is_set():
-                final_result_json = json.loads(recognizer.FinalResult())
-                full_transcript.append(final_result_json.get('text', ''))
-
+                full_transcript.append(json.loads(recognizer.FinalResult()).get('text', ''))
         return " ".join(full_transcript).strip()
 
-    def _transcribe_with_whisper(self, temp_wav_file, file_path_str):
-        # Whisper não tem callback de progresso, então simulamos
-        # A simulação é menos importante em modo concorrente, pois o progresso geral avança
-        # quando qualquer arquivo termina.
-        with self.files_in_progress_lock:
-            if file_path_str in self.files_in_progress:
-                self.files_in_progress[file_path_str]['progress'] = 50 # Indica que está no meio
-        
-        self.pause_event.wait() # Ponto de pausa antes de iniciar a tarefa pesada
+    def _transcribe_with_whisper(self, temp_wav_file, file_path_str, start_time):
+        self.pause_event.wait()
         if self.stop_requested.is_set(): return None
-
+        
+        # Simulação de progresso para Whisper
+        self._update_file_progress(file_path_str, 50, start_time)
         result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
         return result['text'].strip()
 
     def _transcribe_single_file(self, file_path_str):
-        """Processa um único arquivo. Retorna o caminho do arquivo de origem se for bem-sucedido."""
-        if self.stop_requested.is_set():
-            return None
-
+        if self.stop_requested.is_set(): return None
+        
         file_path = Path(file_path_str)
-        base_name = file_path.name
+        start_time = time.time()
         
         with self.files_in_progress_lock:
             self.files_in_progress[file_path_str] = {
-                "filename": base_name,
-                "progress": 0,
-                "status_text": "Iniciando..."
+                "filename": file_path.name, "progress": 0, "status": "running",
+                "elapsed_str": "00:00", "eta_str": "--:--"
             }
 
-        # Checagem de Pausa/Parada
         self.pause_event.wait()
         if self.stop_requested.is_set(): return None
 
-        # Define o caminho de saída
         if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
-            relative_path = file_path.relative_to(self.source_path)
-            output_txt_path = self.dest_path / relative_path.with_suffix('.txt')
+            output_txt_path = self.dest_path / file_path.relative_to(self.source_path).with_suffix('.txt')
         else:
             output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
         output_txt_path.parent.mkdir(parents=True, exist_ok=True)
@@ -202,56 +183,34 @@ class TranscriptionManager:
         temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav"
 
         try:
-            with self.files_in_progress_lock:
-                self.files_in_progress[file_path_str]['status_text'] = "Convertendo..."
-                self.files_in_progress[file_path_str]['progress'] = 5
-
             if not convert_to_wav(str(file_path), str(temp_wav_file)):
-                raise Exception("Falha na conversão para WAV")
+                raise Exception("Falha na conversão")
 
             self.pause_event.wait()
             if self.stop_requested.is_set(): return None
 
-            with self.files_in_progress_lock:
-                self.files_in_progress[file_path_str]['status_text'] = "Transcrevendo..."
-                self.files_in_progress[file_path_str]['progress'] = 10
-
             transcript_text = None
             if self.model_name.startswith('whisper'):
-                transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str)
-            elif self.model_name == 'vosk':
-                transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str)
+                transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str, start_time)
+            else:
+                transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str, start_time)
             
             if self.stop_requested.is_set(): return None
 
             if transcript_text:
-                with self.files_in_progress_lock:
-                     self.files_in_progress[file_path_str]['status_text'] = "Salvando..."
-                     self.files_in_progress[file_path_str]['progress'] = 98
-                with open(output_txt_path, 'w', encoding='utf-8') as f:
-                    f.write(transcript_text)
-                
-                # Adiciona à lista de recém-concluídos de forma segura
+                with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
                 with self.completed_files_lock:
-                    self.newly_completed_files.append({
-                        "source_path": file_path_str,
-                        "output_path": str(output_txt_path)
-                    })
-                return file_path_str # Sucesso
+                    self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)})
+                return file_path_str
             else:
-                raise Exception("Transcrição retornou texto vazio")
-
+                raise Exception("Transcrição vazia")
         except Exception as e:
-            print(f"[ERRO] Falha ao processar {base_name}: {e}")
-            return None # Falha
+            print(f"[ERRO] Falha em {file_path.name}: {e}")
+            return None
         finally:
-            # Limpa o arquivo temporário
             if os.path.exists(temp_wav_file):
-                try:
-                    os.remove(temp_wav_file)
-                except OSError:
-                    pass
-            # Remove o arquivo da lista de "em progresso"
+                try: os.remove(temp_wav_file)
+                except OSError: pass
             with self.files_in_progress_lock:
                 if file_path_str in self.files_in_progress:
                     del self.files_in_progress[file_path_str]
@@ -261,56 +220,40 @@ class TranscriptionManager:
         if not self.model:
             self.status = "error"
             return
-
         self.status = "running"
         self.batch_start_time = time.time()
         self.files_processed_count = 0
-        
-        with ThreadPoolExecutor(max_workers=self.max_concurrent_tasks) as executor:
-            # Submete todas as tarefas
-            future_to_file = {executor.submit(self._transcribe_single_file, fp): fp for fp in self.files_to_process}
-
-            for future in as_completed(future_to_file):
-                if self.stop_requested.is_set():
-                    # Cancela as futuras pendentes se possível (não cancela as que já estão rodando)
-                    for f in future_to_file:
-                        f.cancel()
-                    break
-                
-                result_filepath = future.result()
-                if result_filepath: # Se não for None, foi sucesso
-                    self.files_processed_count += 1
-        
-        # Define o status final
+        self.executor = ThreadPoolExecutor(max_workers=self.max_concurrent_tasks)
+        future_to_file = {self.executor.submit(self._transcribe_single_file, fp): fp for fp in self.files_to_process}
+        for future in as_completed(future_to_file):
+            if self.stop_requested.is_set():
+                for f in future_to_file:
+                    f.cancel()
+                break
+            result_filepath = future.result()
+            if result_filepath:
+                self.files_processed_count += 1
         if self.stop_requested.is_set():
             self.status = "stopped"
-            print("PROCESSO INTERROMPIDO.")
         else:
             self.status = "completed"
-            print("PROCESSO CONCLUÍDO.")
-        
         self.progress_general = (self.files_processed_count / self.total_files) * 100 if self.total_files > 0 else 100
 
     def get_status(self):
         with self.completed_files_lock:
             completed_list = self.newly_completed_files
             self.newly_completed_files = []
-        
         with self.files_in_progress_lock:
             in_progress_list = list(self.files_in_progress.items())
-
         if self.status in ["running", "paused"] and self.total_files > 0:
-            # Calcula o progresso geral baseado nos arquivos já concluídos
             self.progress_general = (self.files_processed_count / self.total_files) * 100
-        
         batch_elapsed_str = self._format_time(time.time() - self.batch_start_time) if self.batch_start_time else "00:00"
-
         return {
             "status": self.status,
             "progress_general": self.progress_general,
             "batch_elapsed_str": batch_elapsed_str,
             "total_files": self.total_files,
             "files_processed": self.files_processed_count,
-            "files_in_progress": dict(in_progress_list), # Envia uma cópia do dicionário
-            "completed_files": completed_list # Envia a lista de arquivos recém-concluídos
+            "files_in_progress": dict(in_progress_list),
+            "completed_files": completed_list
         }
