@@ -129,3 +129,14 @@ html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
 html.dark .scrollbar-thin {
     scrollbar-color: #4b5563 transparent;
 }
+
+/* NOVO: Estilo para seleção sincronizada de item */
+.selected-item {
+    background-color: #dbeafe !important; /* light blue */
+    border: 1px solid #93c5fd;
+}
+
+html.dark .selected-item {
+    background-color: #374151 !important; /* dark gray */
+    border: 1px solid #4b5563;
+}

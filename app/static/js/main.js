@@ -189,6 +189,80 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // --- Botões de expandir/recolher árvore ---
+    const expandAllBtn = document.getElementById('expand-all-btn');
+    const collapseAllBtn = document.getElementById('collapse-all-btn');
+
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', () => {
+            fileTreeContainer.querySelectorAll('details.folder-item').forEach(d => d.open = true);
+        });
+    }
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', () => {
+            fileTreeContainer.querySelectorAll('details.folder-item').forEach(d => d.open = false);
+        });
+    }
+
+    // --- Seleção sincronizada entre blocos ---
+    function clearAllSelections() {
+        document.querySelectorAll('.selected-item').forEach(el => el.classList.remove('selected-item'));
+    }
+    function selectItemInAllPanels(filepath) {
+        clearAllSelections();
+        document.querySelectorAll(`[data-filepath="${filepath}"]`).forEach(el => el.classList.add('selected-item'));
+    }
+    fileTreeContainer.addEventListener('click', e => {
+        const li = e.target.closest('li[data-filepath]');
+        if (li) selectItemInAllPanels(li.dataset.filepath);
+    });
+    inProgressList.addEventListener('click', e => {
+        const li = e.target.closest('li[data-filepath]');
+        if (li) selectItemInAllPanels(li.dataset.filepath);
+    });
+
+    // --- Remoção e movimentação sincronizada via eventos do menu de contexto ---
+    document.addEventListener('queue:action', e => {
+        const { action, filePath } = e.detail;
+        if (action === 'remove') {
+            // Remove da fila
+            fileQueue = fileQueue.filter(item => item.path !== filePath);
+            // Remove da UI
+            document.querySelectorAll(`[data-filepath="${filePath}"]`).forEach(el => el.remove());
+            updateFileTree();
+        } else if (action === 'move-top') {
+            const idx = fileQueue.findIndex(item => item.path === filePath);
+            if (idx > 0) {
+                const [item] = fileQueue.splice(idx, 1);
+                fileQueue.unshift(item);
+                updateFileTree();
+            }
+        }
+    });
+
+    // --- Spinner em pastas com arquivos em processamento ---
+    function updateFolderSpinners(filesInProgress) {
+        // Remove todos os spinners antigos
+        fileTreeContainer.querySelectorAll('.folder-item summary .fa-cog').forEach(el => el.remove());
+        // Para cada pasta, verifica se contém algum arquivo em progresso
+        fileTreeContainer.querySelectorAll('details.folder-item').forEach(details => {
+            const summary = details.querySelector('summary');
+            const folderPath = summary.textContent.trim();
+            // Caminhos dos arquivos em progresso
+            const files = Object.keys(filesInProgress);
+            let hasActive = false;
+            files.forEach(fp => {
+                if (summary && fp.includes(folderPath)) hasActive = true;
+            });
+            if (hasActive) {
+                const spinner = document.createElement('i');
+                spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
+                summary.appendChild(spinner);
+            }
+        });
+    }
+
+    // --- Atualização do updateProgress para feedback visual dinâmico ---
     function updateProgress() {
         fetch('/get-progress')
             .then(response => response.json())
@@ -235,6 +309,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                             progressBar.style.width = `${info.progress || 0}%`;
                         }
                     });
+                    // Atualiza spinners nas pastas
+                    updateFolderSpinners(data.files_in_progress);
                 }
 
 

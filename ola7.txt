@@ -1,0 +1,902 @@
+Com certeza\! Baseado no seu plano 5W2H1S, preparei as modificações necessárias no código para implementar todas as funcionalidades de usabilidade e sincronia visual. As alterações estão focadas em tornar a interface mais inteligente, reativa e intuitiva.
+
+A seguir estão os blocos de código completos e atualizados para os arquivos que precisam ser modificados. Você pode substituir o conteúdo dos seus arquivos existentes por estes.
+
+### **1. `app/templates/index.html` (Onde? / How?)**
+
+Adicionamos os botões para expandir/recolher a árvore de arquivos no cabeçalho da seção "Fila de Processamento".
+
+```html
+<!DOCTYPE html>
+<html lang="pt-BR" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Painel de Transcrição Avançado</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+
+<body class="h-screen flex flex-col select-none bg-gray-100 text-gray-800">
+
+  <header class="flex items-center justify-between flex-wrap bg-white border-b border-gray-200 px-4 py-3 gap-4 shrink-0">
+    <div class="flex items-center gap-x-6 gap-y-3 flex-wrap">
+        
+        <div>
+            <label for="destino" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">DESTINO</label>
+            <div class="flex items-center">
+                <input id="destino" type="text" class="w-56 md:w-64 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Selecione um destino...">
+                <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
+            </div>
+      
+        </div>
+
+        <div class="flex items-end gap-4">
+            <div>
+                <label for="model-selector" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">MODELO</label>
+                <select id="model-selector" class="w-48 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+                    <option value="whisper_base" selected>Whisper - Base</option>
+                    <option value="whisper_tiny">Whisper - Tiny</option>
+                    <option value="whisper_small">Whisper - Small</option>
+                    <option value="whisper_medium">Whisper - Medium</option>
+                    <option value="whisper_large">Whisper - Large</option>
+                    <option value="vosk">Vosk</option>
+                </select>
+            </div>
+            <div class="flex items-center pb-2">
+                <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked> <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">Manter estrutura</label>
+           
+            </div>
+        </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="start-btn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>INICIAR</button>
+      <button id="pause-btn" class="hidden flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-pause"></i>PAUSAR</button>
+      <button id="resume-btn" class="hidden flex items-center gap-2 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>RETOMAR</button>
+      <button id="stop-btn" class="hidden flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-stop"></i>PARAR</button>
+      <button id="settings-btn" class="text-gray-500 hover:text-blue-600 px-2 py-2 rounded-md transition-colors"><i class="fas fa-cog fa-lg"></i></button>
+    </div>
+  </header>
+
+  <main id="drop-zone" class="flex-1 flex flex-col lg:flex-row p-4 gap-4 overflow-y-auto lg:overflow-y-hidden">
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Fila de Processamento</h2>
+            <div class="flex items-center gap-4">
+              <button id="expand-all-btn" title="Expandir tudo" class="text-sm font-semibold text-gray-600 hover:text-blue-600"><i class="fas fa-plus-square"></i></button>
+              <button id="collapse-all-btn" title="Recolher tudo" class="text-sm font-semibold text-gray-600 hover:text-blue-600"><i class="fas fa-minus-square"></i></button>
+              
+              <button id="add-folder-btn" title="Adicionar pasta de arquivos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-folder-plus"></i></button>
+              <button id="add-file-btn" title="Adicionar arquivos avulsos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-plus"></i></button>
+              <button id="clear-queue-btn" title="Limpar a fila" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
+            </div>
+     
+        </header>
+        <div id="file-tree-container" class="flex-1 overflow-y-auto scrollbar-thin p-2">
+            </div>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Em Progresso</h2>
+        </header>
+        <ul id="in-progress-list" class="flex-1 overflow-y-auto scrollbar-thin">
+      
+        </ul>
+    </section>
+
+    <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
+        <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
+            <h2 class="text-base font-semibold text-gray-800">Concluídos</h2>
+            <button id="clear-completed-btn" title="Limpar lista de concluídos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"><i class="fas fa-broom"></i></button>
+        </header>
+        <ul id="completed-list" class="flex-1 overflow-y-auto scrollbar-thin">
+            </ul>
+    </section>
+  </main>
+  
+  <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-600 rounded-lg flex items-center justify-center pointer-events-none z-50">
+      <div class="text-center text-blue-800 font-bold text-2xl">
+          <i class="fas fa-folder-plus fa-3x"></i>
+          <p class="mt-4">Arraste e solte uma pasta para adicionar à fila</p>
+      </div>
+  </div>
+
+  <footer class="bg-white border-t border-gray-200 px-4 py-2 text-sm shrink-0">
+    <div class="w-full">
+        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600">Pronto para iniciar. Adicione arquivos ou pastas à fila.</p>
+        <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div id="progress-bar-general" class="h-2 bg-blue-600 rounded-full transition-width duration-300" style="width: 0%;"></div>
+        </div>
+    </div>
+  </footer>
+
+  <div id="contextMenu" class="hidden fixed z-50 w-60 bg-white rounded-md shadow-lg border py-1 text-sm"></div>
+  
+  <div id="settings-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div class="flex justify-between items-center p-4 border-b">
+              <h3 class="text-lg font-semibold">Configurações</h3>
+              <button id="close-settings-modal" class="text-gray-500 hover:text-gray-800">&times;</button>
+          </div>
+          <div class="p-6 space-y-4">
+              <div>
+                  <label for="max-concurrent-tasks" class="block text-sm font-medium text-gray-700">Processos Simultâneos (1-16)</label>
+                  <input type="number" id="max-concurrent-tasks" name="max-concurrent-tasks" min="1" max="16" class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+              </div>
+              <div class="flex items-center mt-4">
+                  <input id="dark-mode-toggle" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
+                   <label for="dark-mode-toggle" class="ml-2 block text-sm text-gray-900">Tema escuro</label>
+              </div>
+          </div>
+          <div class="flex justify-end p-4 bg-gray-50 border-t rounded-b-lg">
+              <button id="save-settings-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md">Salvar</button>
+          </div>
+      </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
+```
+
+### **2. `app/static/css/style.css` (Where? / How?)**
+
+Adicionamos a classe `.selected-item` para destacar visualmente os arquivos selecionados de forma síncrona entre os blocos.
+
+```css
+/* Conteúdo de app/static/css/style.css */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F8F9FA;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Estilos para o Tema Escuro (RNF3 - CORRIGIDO) --- */
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html.dark header, 
+html.dark footer,
+html.dark section {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+html.dark h2,
+html.dark h3,
+html.dark label,
+html.dark #progress-text-general,
+html.dark .text-sm {
+  color: #d1d5db;
+}
+
+html.dark label[for="keep-structure-checkbox"] {
+    color: #f3f4f6;
+}
+
+html.dark input[type="text"],
+html.dark input[type="number"],
+html.dark select {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+html.dark input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark button,
+html.dark button:disabled {
+    opacity: 1.0;
+}
+html.dark button:disabled {
+    opacity: 0.5;
+}
+html.dark #select-origem-btn,
+html.dark #select-destino-btn {
+    background-color: #374151;
+    border-color: #4b5563;
+}
+html.dark #select-origem-btn:hover,
+html.dark #select-destino-btn:hover {
+    background-color: #4b5563;
+}
+
+html.dark .file-item,
+html.dark .folder-item > summary {
+    color: #d1d5db !important;
+}
+
+html.dark li.file-item:hover,
+html.dark details.folder-item > summary:hover {
+    background-color: #374151;
+}
+
+/* Correção para Menus e Modais */
+html.dark #contextMenu,
+html.dark #settings-modal .bg-white {
+    background-color: #27272a;
+    border-color: #4b5563;
+}
+
+html.dark #contextMenu a {
+    color: #d1d5db;
+}
+html.dark #contextMenu a:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+html.dark #contextMenu .text-red-600 {
+    color: #f87171 !important;
+}
+html.dark #contextMenu a.hover\:bg-red-100:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+html.dark #settings-modal .border-b,
+html.dark #settings-modal .border-t,
+html.dark #contextMenu .border-t {
+    border-color: #4b5563;
+}
+html.dark #settings-modal #close-settings-modal:hover {
+    color: #ffffff;
+}
+html.dark #settings-modal .bg-gray-50 {
+    background-color: #1f2937;
+}
+
+/* --- Fim dos Estilos do Tema Escuro --- */
+
+/* Scrollbar thin for lists */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+html.dark .scrollbar-thin {
+    scrollbar-color: #4b5563 transparent;
+}
+
+/* NOVO: Estilo para seleção sincronizada de item */
+.selected-item {
+    background-color: #dbeafe !important; /* light blue */
+    border: 1px solid #93c5fd;
+}
+
+html.dark .selected-item {
+    background-color: #374151 !important; /* dark gray */
+    border: 1px solid #4b5563;
+}
+```
+
+### **3. `app/static/js/ui.js` (What? / How?)**
+
+Aqui, adicionamos os **ícones ao menu de contexto** e, mais importante, modificamos o menu para **despachar eventos customizados** em vez de apenas logar no console. Isso desacopla a lógica e permite que o `main.js` gerencie o estado da fila de forma centralizada.
+
+```javascript
+console.log("ui.js (Atualizado) foi carregado.");
+
+function waitForPywebviewApi() {
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(intervalId);
+                resolve(window.pywebview.api);
+            }
+        }, 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const api = await waitForPywebviewApi();
+        const contextMenu = document.getElementById('contextMenu');
+        if (!contextMenu) return;
+
+        let currentTargetItem = null;
+
+        function closeContextMenu() {
+            contextMenu.classList.add('hidden');
+            currentTargetItem = null;
+        }
+         
+        // ATUALIZADO: Lógica do menu de contexto unificada e inteligente
+        function showContextMenu(event, element) {
+            event.preventDefault();
+            event.stopPropagation();
+            currentTargetItem = element;
+
+            const isCompletedItem = currentTargetItem.closest('#completed-list');
+            const isInProgressItem = currentTargetItem.closest('#in-progress-list');
+            const isQueueItem = currentTargetItem.closest('#file-tree-container');
+            const isFile = currentTargetItem.dataset.filepath;
+
+            // Determina se o processo principal está ocioso ou rodando/pausado
+            const isProcessingIdle = document.getElementById('start-btn').offsetParent !== null;
+
+            let menuContent = '';
+
+            if (isCompletedItem) {
+                menuContent = `
+                    <a href="#" data-action="open-file" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-file-alt w-4"></i>Abrir Transcrição (.txt)</a>
+                    <a href="#" data-action="open-location" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-folder-open w-4"></i>Abrir Local do Arquivo</a>
+                `;
+            } else if (isFile) { // Para itens na Fila ou Em Progresso
+                // Ações comuns
+                menuContent += `<a href="#" data-action="open-file" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-play-circle w-4"></i>Abrir Mídia Original</a>`;
+                menuContent += `<a href="#" data-action="open-location" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-folder-open w-4"></i>Abrir Local do Arquivo</a>`;
+                
+                if (isProcessingIdle) { // Se o processo principal está parado/ocioso
+                    menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
+                    menuContent += `<a href="#" data-action="move-top" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-angle-double-up w-4"></i>Mover para o topo</a>`;
+                    menuContent += `<a href="#" data-action="remove" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-100"><i class="fas fa-trash-alt w-4"></i>Remover da Fila</a>`;
+                } else { // Se o processo principal está rodando ou pausado
+                    menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
+                    menuContent += `<a href="#" data-action="prioritize" class="flex items-center gap-3 px-4 py-2 text-blue-700 hover:bg-blue-100 font-semibold"><i class="fas fa-star w-4"></i>Processar este agora</a>`;
+
+                    const isPaused = currentTargetItem.querySelector('.fa-pause-circle') || (isQueueItem && currentTargetItem.querySelector('.queue-status-icon .fa-pause-circle'));
+
+                    if (isPaused) {
+                         menuContent += `<a href="#" data-action="resume-item" class="flex items-center gap-3 px-4 py-2 text-green-600 hover:bg-green-100"><i class="fas fa-play w-4"></i>Retomar este arquivo</a>`;
+                    } else {
+                         menuContent += `<a href="#" data-action="pause-item" class="flex items-center gap-3 px-4 py-2 text-yellow-600 hover:bg-yellow-100"><i class="fas fa-pause w-4"></i>Pausar este arquivo</a>`;
+                    }
+                }
+            } else {
+                return; // Não mostra menu se não for um item de arquivo válido
+            }
+
+            contextMenu.innerHTML = menuContent;
+            // Posiciona e exibe o menu
+            const { clientX: mouseX, clientY: mouseY } = event;
+            contextMenu.style.top = `${mouseY}px`;
+            contextMenu.style.left = `${mouseX}px`;
+            contextMenu.classList.remove('hidden');
+        }
+
+        // NOVO: Listener de clique centralizado que despacha eventos para main.js
+        contextMenu.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const link = e.target.closest('a');
+            if (!link || !currentTargetItem) return;
+
+            const action = link.dataset.action;
+            const filePath = currentTargetItem.dataset.filepath;
+
+            switch (action) {
+                case 'open-file':
+                    api.open_file_natively(filePath);
+                    break;
+                case 'open-location':
+                    api.open_folder_in_explorer(filePath);
+                    break;
+                case 'remove':
+                case 'move-top':
+                    // Dispara um evento para main.js tratar a manipulação da fila
+                    document.dispatchEvent(new CustomEvent('queue:action', { 
+                        detail: { action, filePath } 
+                    }));
+                    break;
+                case 'prioritize':
+                    await fetch('/prioritize-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+                case 'pause-item':
+                    await fetch('/pause-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+                case 'resume-item':
+                    await fetch('/resume-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+            }
+            closeContextMenu();
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target)) {
+                closeContextMenu();
+            }
+        });
+
+        document.addEventListener('contextmenu', (e) => {
+            const li = e.target.closest('li[data-filepath]');
+            if (li) {
+                showContextMenu(e, li);
+            } else {
+                closeContextMenu();
+            }
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContextMenu();
+        });
+
+    } catch (error) {
+        console.error("ui.js: API não encontrada.", error);
+    }
+});
+```
+
+### **4. `app/static/js/main.js` (What? / Why? / How?)**
+
+Este é o arquivo com as **maiores modificações**. Ele agora implementa toda a lógica solicitada:
+
+  - **Remoção Sincronizada**: Ouve os eventos do `ui.js` para remover/mover itens da fila (`fileQueue`) e da UI de forma síncrona.
+  - **Feedback Visual Dinâmico**: A função `updateProgress` agora atualiza os ícones de status nos dois painéis ("Fila" e "Em Progresso") simultaneamente.
+  - **Expandir/Recolher Tudo**: Listeners de clique para os novos botões que controlam todos os elementos `<details>`.
+  - **Seleção Sincronizada**: Um listener de clique centralizado que destaca o mesmo arquivo em todos os painéis onde ele aparece.
+  - **Spinner em Pastas**: Animação de carregamento em pastas que contêm arquivos em processamento.
+
+<!-- end list -->
+
+```javascript
+// ==================================================================
+// Arquivo: app/static/js/main.js (Atualizado com Usabilidade e Sincronia)
+// Principais mudanças:
+// - Remoção e movimentação de itens na fila sincronizados com a UI.
+// - Feedback visual (ícones de status) sincronizado entre o painel de Fila e Em Progresso.
+// - Botões para expandir/recolher a árvore de arquivos.
+// - Destaque visual sincronizado ao clicar em um arquivo em qualquer painel.
+// - Animação de spinner em pastas com arquivos sendo processados.
+// ==================================================================
+
+function waitForPywebviewApi() {
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(intervalId);
+                resolve(window.pywebview.api);
+            }
+        }, 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    const api = await waitForPywebviewApi();
+    
+    // --- Elementos da UI ---
+    const startBtn = document.getElementById('start-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resumeBtn = document.getElementById('resume-btn');
+    const settingsBtn = document.getElementById('settings-btn');
+    
+    const destinoInput = document.getElementById('destino');
+    const selectDestinoBtn = document.getElementById('select-destino-btn');
+    
+    const addFolderBtn = document.getElementById('add-folder-btn');
+    const addFileBtn = document.getElementById('add-file-btn');
+    const clearQueueBtn = document.getElementById('clear-queue-btn');
+    const clearCompletedBtn = document.getElementById('clear-completed-btn');
+    // NOVO: Botões de expandir/recolher
+    const expandAllBtn = document.getElementById('expand-all-btn');
+    const collapseAllBtn = document.getElementById('collapse-all-btn');
+    
+    const fileTreeContainer = document.getElementById('file-tree-container');
+    const inProgressList = document.getElementById('in-progress-list');
+    const completedList = document.getElementById('completed-list');
+    
+    const progressBarGeneral = document.getElementById('progress-bar-general');
+    const progressTextGeneral = document.getElementById('progress-text-general');
+    
+    const settingsModal = document.getElementById('settings-modal');
+    const closeSettingsModalBtn = document.getElementById('close-settings-modal');
+    const saveSettingsBtn = document.getElementById('save-settings-btn');
+    const maxConcurrentInput = document.getElementById('max-concurrent-tasks');
+    const dropZone = document.getElementById('drop-zone');
+    const dropZoneOverlay = document.getElementById('drop-zone-overlay');
+    let progressInterval = null;
+    
+    let fileQueue = [];
+
+    // --- Funções de UI ---
+    function updateUIForState(state) {
+        const isIdle = state === 'idle';
+        const isRunning = state === 'running';
+        const isPaused = state === 'paused';
+        const isStoppedOrCompleted = state === 'stopped' || state === 'completed';
+
+        startBtn.classList.toggle('hidden', !isIdle && !isStoppedOrCompleted);
+        pauseBtn.classList.toggle('hidden', !isRunning);
+        resumeBtn.classList.toggle('hidden', !isPaused);
+        stopBtn.classList.toggle('hidden', isIdle || isStoppedOrCompleted);
+
+        const elementsToDisable = [
+            destinoInput, selectDestinoBtn, addFolderBtn, addFileBtn, 
+            clearQueueBtn, settingsBtn, expandAllBtn, collapseAllBtn
+        ];
+        elementsToDisable.forEach(el => {
+            if(el) el.disabled = isRunning || isPaused;
+        });
+    }
+
+    // --- Funções da Fila e Árvore de Arquivos ---
+    
+    // NOVO: Remove um item da fila e da UI de forma síncrona
+    function removeItemFromQueue(filePathToRemove) {
+        if (progressInterval) return; // Não permite remover durante o processo
+        
+        fileQueue = fileQueue.filter(item => item.path !== filePathToRemove);
+        updateFileTree(); // Re-renderiza a árvore de arquivos
+    }
+
+    // NOVO: Move um item para o topo da fila
+    function moveItemToTop(filePathToMove) {
+        if (progressInterval) return;
+
+        const itemIndex = fileQueue.findIndex(item => item.path === filePathToMove);
+        if (itemIndex > 0) {
+            const [item] = fileQueue.splice(itemIndex, 1);
+            fileQueue.unshift(item);
+            updateFileTree();
+        }
+    }
+    
+    // ATUALIZADO: Renderiza os itens da árvore com um span para o ícone de status
+    function renderTree(node, container, level = 0) {
+        const ul = document.createElement('ul');
+        if (level > 0) ul.className = 'pl-4';
+
+        Object.keys(node).sort().forEach(key => {
+            if (key.startsWith('_')) return;
+
+            const li = document.createElement('li');
+            const itemData = node[key];
+
+            if (itemData._isLeaf) {
+                li.className = 'file-item text-sm text-gray-700 p-1 rounded-md flex items-center justify-between';
+                li.dataset.filepath = itemData._fullPath;
+                li.innerHTML = `
+                    <span class="truncate"><i class="fas fa-file-audio text-gray-500 mr-2"></i>${key}</span>
+                    <span class="queue-status-icon ml-2"></span>
+                `;
+            } else {
+                li.innerHTML = `<details class="folder-item" open>
+                                  <summary class="p-1 cursor-pointer hover:bg-gray-100 rounded-md flex items-center justify-between">
+                                    <span><i class="fas fa-folder text-yellow-500 mr-2"></i>${key}</span>
+                                    <span class="folder-status-icon ml-2"></span>
+                                  </summary>
+                                </details>`;
+                const details = li.querySelector('details');
+                renderTree(itemData, details, level + 1);
+            }
+            ul.appendChild(li);
+        });
+        container.appendChild(ul);
+    }
+
+    // ATUALIZADO: Função reescrita para lidar com múltiplas origens e adicionar spans de status
+    function updateFileTree() {
+        fileTreeContainer.innerHTML = '';
+        if (fileQueue.length === 0) {
+            fileTreeContainer.innerHTML = '<p class="text-center text-gray-400 p-4">Nenhum arquivo na fila.</p>';
+            return;
+        }
+
+        const groupedBySource = fileQueue.reduce((acc, file) => {
+            const source = file.source || 'avulsos';
+            if (!acc[source]) acc[source] = [];
+            acc[source].push(file.path);
+            return acc;
+        }, {});
+
+        for (const source in groupedBySource) {
+            const files = groupedBySource[source];
+            const sourceName = source === 'avulsos' ? 'Arquivos Avulsos' : source.split(/[\\/]/).pop();
+            
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'mb-4';
+            const header = document.createElement('h3');
+            header.className = 'text-sm font-semibold text-gray-600 p-1 border-b mb-1 flex items-center justify-between';
+            header.innerHTML = `
+                <span><i class="fas ${source === 'avulsos' ? 'fa-file-import' : 'fa-folder'} mr-2"></i>${sourceName}</span>
+                <span class="folder-status-icon ml-2"></span>
+            `;
+            groupContainer.appendChild(header);
+
+            if (source === 'avulsos') {
+                 const ul = document.createElement('ul');
+                 files.forEach(path => {
+                    const li = document.createElement('li');
+                    li.className = 'file-item text-sm text-gray-700 p-1 rounded-md list-none flex items-center justify-between';
+                    li.dataset.filepath = path;
+                    li.innerHTML = `
+                        <span class="truncate"><i class="fas fa-file-audio text-gray-500 mr-2"></i>${path.split(/[\\/]/).pop()}</span>
+                        <span class="queue-status-icon ml-2"></span>
+                    `;
+                    ul.appendChild(li);
+                });
+                groupContainer.appendChild(ul);
+            } else {
+                 const tree = buildFileTree(files, source);
+                 renderTree(tree, groupContainer);
+            }
+            fileTreeContainer.appendChild(groupContainer);
+        }
+    }
+
+    // --- Funções de Sincronia e Progresso ---
+
+    // NOVO: Destaca um item em todos os painéis e o rola para a visão
+    function highlightItem(filePath) {
+        // Remove destaque anterior de todos os painéis
+        document.querySelectorAll('.selected-item').forEach(el => el.classList.remove('selected-item'));
+
+        if (!filePath) return;
+
+        // Adiciona novo destaque
+        const itemsToHighlight = document.querySelectorAll(`li[data-filepath="${CSS.escape(filePath)}"]`);
+        itemsToHighlight.forEach(item => {
+            item.classList.add('selected-item');
+            // Rola o item para a visão no seu respectivo container
+            item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+    }
+
+    // ATUALIZADO: A função de progresso agora sincroniza o status visual em todos os painéis
+    function updateProgress() {
+        fetch('/get-progress')
+            .then(response => response.json())
+            .then(data => {
+                updateUIForState(data.status);
+                progressBarGeneral.style.width = `${data.progress_general}%`;
+                progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+                
+                // Limpa todos os ícones de status da fila e spinners de pasta antes de reavaliar
+                document.querySelectorAll('.queue-status-icon, .folder-status-icon').forEach(icon => icon.innerHTML = '');
+
+                if (data.status === 'running' || data.status === 'paused') {
+                    if (inProgressList.innerHTML === '') {
+                        fileQueue.forEach(file => {
+                            const li = document.createElement('li');
+                            li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 dark:border-gray-700';
+                            li.dataset.filepath = file.path;
+                            li.innerHTML = `
+                                <div class="flex items-center gap-3">
+                                    <span class="status-icon"><i class="fas fa-clock text-gray-400"></i></span>
+                                    <p class="flex-1 font-medium truncate" title="${file.path}">${file.path.split(/[\\/]/).pop()}</p>
+                                    <span class="progress-percent ml-2 text-xs text-gray-500">0%</span>
+                                </div>
+                                <div class="h-1 mt-2 bg-gray-200 dark:bg-gray-600 rounded-full overflow-hidden">
+                                    <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: 0%;"></div>
+                                </div>
+                            `;
+                            inProgressList.appendChild(li);
+                        });
+                    }
+
+                    // Atualiza os itens individuais no painel "Em Progresso" e na "Fila"
+                    Object.entries(data.files_in_progress).forEach(([path, info]) => {
+                        const inProgressNode = inProgressList.querySelector(`li[data-filepath="${CSS.escape(path)}"]`);
+                        const queueNode = fileTreeContainer.querySelector(`li[data-filepath="${CSS.escape(path)}"]`);
+                        
+                        let statusIconRunning = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                        let statusIconPaused = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                        let currentStatusIcon = info.status === 'paused' ? statusIconPaused : statusIconRunning;
+
+                        if (inProgressNode) {
+                            inProgressNode.querySelector('.status-icon').innerHTML = currentStatusIcon;
+                            inProgressNode.querySelector('.progress-percent').textContent = `${Math.round(info.progress || 0)}%`;
+                            inProgressNode.querySelector('.progress-bar').style.width = `${info.progress || 0}%`;
+                        }
+
+                        if (queueNode) {
+                             queueNode.querySelector('.queue-status-icon').innerHTML = currentStatusIcon;
+                             // Adiciona spinner às pastas-pai
+                             let parent = queueNode.parentElement;
+                             while(parent && parent !== fileTreeContainer) {
+                                if (parent.tagName === 'DETAILS') {
+                                    const summary = parent.querySelector('summary');
+                                    if(summary) {
+                                        const iconSpan = summary.querySelector('.folder-status-icon');
+                                        if (iconSpan && iconSpan.innerHTML === '') {
+                                            iconSpan.innerHTML = '<i class="fas fa-spinner fa-spin text-blue-500"></i>';
+                                        }
+                                    }
+                                }
+                                parent = parent.parentElement;
+                             }
+                        }
+                    });
+                }
+
+                data.completed_files.forEach(fileInfo => {
+                    const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
+                    const queueNode = fileTreeContainer.querySelector(`li[data-filepath="${CSS.escape(sourcePath)}"]`);
+                    if (queueNode) {
+                        queueNode.querySelector('.queue-status-icon').innerHTML = '<i class="fas fa-check-circle text-green-600"></i>';
+                    }
+                    
+                    const inProgressNode = inProgressList.querySelector(`li[data-filepath="${CSS.escape(sourcePath)}"]`);
+                    if (inProgressNode) inProgressNode.remove();
+
+                    const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                    if (!completedList.querySelector(`li[data-filepath="${CSS.escape(fileInfo.output_path)}"]`)) {
+                        const li = document.createElement('li');
+                        li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                        li.dataset.filepath = fileInfo.output_path;
+                        li.innerHTML = `
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                            <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                                <i class="fas fa-ellipsis-v text-gray-500"></i>
+                            </div>
+                        `;
+                        completedList.prepend(li);
+                    }
+                });
+
+                if (data.status === 'completed' || data.status === 'stopped') {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    if (data.status === 'completed') {
+                        progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                        inProgressList.innerHTML = '<p class="text-center text-gray-400 p-4">Fila concluída.</p>';
+                    } else {
+                        progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
+                    }
+                }
+            });
+    }
+
+    // --- Event Listeners ---
+    addFolderBtn.addEventListener('click', async () => {
+        const folderPath = await api.open_folder_dialog('Selecione a Pasta de Origem');
+        if (folderPath) {
+            const files = await api.scan_folder_recursively(folderPath);
+            files.forEach(file => {
+                if (!fileQueue.some(item => item.path === file)) {
+                    fileQueue.push({ path: file.replace(/\\/g, '/'), source: folderPath.replace(/\\/g, '/') });
+                }
+            });
+            updateFileTree();
+        }
+    });
+
+    selectDestinoBtn.addEventListener('click', async () => {
+        const folderPath = await api.open_folder_dialog('Selecione a Pasta de Destino');
+        if (folderPath) destinoInput.value = folderPath;
+    });
+
+    addFileBtn.addEventListener('click', async () => {
+        const files = await api.open_file_dialog();
+        if (files && files.length > 0) {
+            files.forEach(file => {
+                const normalizedPath = file.replace(/\\/g, '/');
+                if (!fileQueue.some(item => item.path === normalizedPath)) {
+                    fileQueue.push({ path: normalizedPath, source: null });
+                }
+            });
+            updateFileTree();
+        }
+    });
+
+    clearQueueBtn.addEventListener('click', () => {
+        if (progressInterval) return;
+        fileQueue = [];
+        updateFileTree();
+    });
+
+    clearCompletedBtn.addEventListener('click', () => {
+        completedList.innerHTML = '';
+    });
+
+    startBtn.addEventListener('click', () => {
+        if (fileQueue.length === 0 || !destinoInput.value) {
+            alert('Adicione arquivos/pastas à fila e selecione uma pasta de destino.');
+            return;
+        }
+        
+        const requestBody = {
+            file_list: fileQueue,
+            dest_path: destinoInput.value,
+            keep_structure: document.getElementById('keep-structure-checkbox').checked,
+            model_name: document.getElementById('model-selector').value
+        };
+
+        fetch('/start-processing', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody),
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                completedList.innerHTML = '';
+                inProgressList.innerHTML = '';
+                progressInterval = setInterval(updateProgress, 1000);
+            } else {
+                alert(`Erro: ${data.message}`);
+            }
+        });
+    });
+
+    stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
+    pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
+    resumeBtn.addEventListener('click', () => fetch('/resume-processing', { method: 'POST' }));
+
+    // NOVO: Listeners para expandir/recolher
+    expandAllBtn.addEventListener('click', () => {
+        fileTreeContainer.querySelectorAll('details').forEach(detail => detail.open = true);
+    });
+    collapseAllBtn.addEventListener('click', () => {
+        fileTreeContainer.querySelectorAll('details').forEach(detail => detail.open = false);
+    });
+
+    // NOVO: Listener para os eventos customizados do ui.js (remover, mover para o topo)
+    document.addEventListener('queue:action', (e) => {
+        const { action, filePath } = e.detail;
+        if (action === 'remove') {
+            removeItemFromQueue(filePath);
+        } else if (action === 'move-top') {
+            moveItemToTop(filePath);
+        }
+    });
+
+    // NOVO: Listener de clique centralizado para sincronizar seleção
+    document.addEventListener('click', (e) => {
+        const clickedItem = e.target.closest('li[data-filepath]');
+        if (clickedItem) {
+            highlightItem(clickedItem.dataset.filepath);
+        }
+    });
+
+    // --- Lógica do Modal e Inicialização ---
+    settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
+    closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+    saveSettingsBtn.addEventListener('click', () => {
+        const settings = {
+            max_concurrent_tasks: parseInt(maxConcurrentInput.value, 10)
+        };
+        fetch('/update-settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(settings)
+        });
+        settingsModal.classList.add('hidden');
+    });
+
+    dropZone.addEventListener('drop', (e) => { e.preventDefault(); e.stopPropagation(); });
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
+
+    fetch('/get-settings').then(res => res.json()).then(data => {
+        maxConcurrentInput.value = data.max_concurrent_tasks || 1;
+    });
+    
+    updateFileTree();
+    updateUIForState('idle');
+});
+```

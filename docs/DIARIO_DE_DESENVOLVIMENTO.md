@@ -109,3 +109,46 @@ Utilizar a ponte de comunicação estabelecida na Fase 5 para implementar todas 
 
 ### Validação
 Ao final da Fase 6, a aplicação atingiu o status de "feature-complete". Todas as interações propostas para a interface do usuário foram implementadas, testadas e validadas, resultando em uma ferramenta de desktop híbrida, poderosa e funcional.
+
+---
+
+## **Fase 7: Expansão Avançada da Fila, Usabilidade e Feedback Visual (Olas 1 a 6)**
+
+### Objetivo
+Implementar as melhorias incrementais detalhadas nos arquivos ola1 a ola6, elevando o sistema a um novo patamar de flexibilidade, controle e experiência do usuário.
+
+### Realizações
+
+- **Fila de Processamento Avançada**
+    - Suporte a múltiplas pastas como origem, com preservação da estrutura de diretórios no destino.
+    - Remoção do campo "Origem" e adição do botão "Adicionar Pasta".
+    - Fila aceita arquivos avulsos e múltiplas pastas, agrupando visualmente por origem.
+    - Exibição completa da fila no painel "Em Progresso", com status individual (aguardando, processando, pausado, concluído).
+    - Sincronização entre a fila de processamento e o bloco "Em Progresso" (remoção/reflexo imediato).
+
+- **Menu de Contexto Inteligente e Unificado**
+    - Menu de contexto dinâmico, exibindo opções conforme o estado do sistema e do arquivo.
+    - Opções: "Processar este agora" (priorizar), "Pausar este arquivo", "Retomar este arquivo", "Mover para o topo", "Remover da fila", "Abrir Mídia Original", "Abrir Local do Arquivo".
+    - Inclusão de ícones/emojis representativos para cada ação.
+    - Listener centralizado para todas as ações do menu.
+
+- **Feedback Visual Imediato e Sincronizado**
+    - Feedback visual instantâneo ao pausar/retomar arquivos (ícones de engrenagem, pausa, play, etc.).
+    - Feedback simultâneo e dinâmico em todos os blocos (fila de processamento e em progresso).
+    - Seleção sincronizada: ao clicar em um arquivo em qualquer bloco, ele é destacado no outro.
+    - Animação de spinner nas pastas da fila de processamento que contêm arquivos em processamento.
+
+- **Expansão e Controle da Árvore de Arquivos**
+    - Opção de expandir/recolher toda a árvore de arquivos na fila de processamento.
+    - Possibilidade de deletar itens ou pastas inteiras, refletindo imediatamente em todos os blocos.
+
+- **Aprimoramentos Gerais de Usabilidade**
+    - Interface mais responsiva, intuitiva e previsível.
+    - Correção de inconsistências visuais e funcionais.
+    - Melhorias no tema escuro, inputs editáveis e validação de caminhos.
+
+### Validação
+- Todas as funcionalidades incrementais dos arquivos ola1 a ola6 foram implementadas, testadas e validadas.
+- O sistema agora oferece controle total ao usuário, com feedback visual claro, operações em lote, priorização manual e experiência de uso profissional.
+
+---
