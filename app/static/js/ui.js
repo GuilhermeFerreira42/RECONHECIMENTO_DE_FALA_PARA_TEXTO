@@ -38,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (isQueueItem && isFile) {
                 menuContent = `
+                    <a href="#" id="context-prioritize" class="block px-4 py-2 text-blue-700 hover:bg-blue-100 font-semibold">Iniciar este arquivo agora</a>
                     <a href="#" id="context-move-top" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Mover para o topo da fila</a>
                     <div class="my-1 border-t border-gray-100"></div>
                     <a href="#" id="context-open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Mídia Original</a>
@@ -69,6 +70,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.preventDefault();
                 const filePath = currentTargetItem.dataset.filepath;
                 await fetch('/pause-file', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ file_path: filePath })
+                });
+                closeContextMenu();
+            });
+
+            // Priorizar arquivo (furar fila)
+            const prioritizeBtn = document.getElementById('context-prioritize');
+            if (prioritizeBtn) prioritizeBtn.addEventListener('click', async (e) => {
+                e.preventDefault();
+                const filePath = currentTargetItem.dataset.filepath;
+                await fetch('/prioritize-file', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ file_path: filePath })

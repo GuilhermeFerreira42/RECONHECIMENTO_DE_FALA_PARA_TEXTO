@@ -24,11 +24,13 @@ def start_processing():
         return jsonify({'status': 'erro', 'message': 'Um processo já está em andamento.'}), 400
 
     data = request.get_json()
-    file_list = data.get('file_list')
+    file_list = data.get('file_list') # file_list agora é uma lista de objetos
     dest_path = data.get('dest_path')
     model_name = data.get('model_name', 'whisper_base')
     keep_structure = data.get('keep_structure', False)
-    source_path = data.get('source_path', None)
+    
+    # REMOVIDO: source_path não é mais recebido diretamente
+    # source_path = data.get('source_path', None) 
 
     if not file_list or not dest_path:
         return jsonify({'status': 'erro', 'message': 'Lista de arquivos ou destino não fornecidos.'}), 400
@@ -36,16 +38,27 @@ def start_processing():
     transcription_job = TranscriptionManager(
         dest_path=dest_path,
         model_name=model_name,
-        file_list=file_list,
+        file_list=file_list, # Passa a lista de objetos
         model_manager=model_manager,
         keep_structure=keep_structure,
-        source_path=source_path,
+        # REMOVIDO: source_path não é mais um parâmetro único
+        # source_path=source_path, 
         max_concurrent_tasks=app_settings.get('max_concurrent_tasks', 1)
     )
     process_thread = threading.Thread(target=transcription_job.run_transcription, daemon=True)
     process_thread.start()
 
     return jsonify({'status': 'sucesso', 'message': 'Processo iniciado.'})
+
+@app.route('/prioritize-file', methods=['POST'])
+def prioritize_file():
+    global transcription_job
+    data = request.get_json()
+    file_path = data.get('file_path')
+    if transcription_job and file_path:
+        transcription_job.prioritize_file(file_path)
+        return jsonify({'status': 'sucesso', 'message': f'Arquivo priorizado: {file_path}'})
+    return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
 
 @app.route('/stop-processing', methods=['POST'])
 def stop_processing():
@@ -86,7 +99,16 @@ def get_progress():
     global transcription_job
     if transcription_job:
         return jsonify(transcription_job.get_status())
-    return jsonify({"status": "idle", "files_in_progress": {}, "completed_files": []})
+    # ATUALIZADO: Estado inicial mais completo
+    return jsonify({
+        "status": "idle", 
+        "files_in_progress": {}, 
+        "completed_files": [],
+        "progress_general": 0,
+        "total_files": 0,
+        "files_processed": 0,
+        "batch_elapsed_str": "00:00"
+    })
 
 @app.route('/update-settings', methods=['POST'])
 def update_settings():

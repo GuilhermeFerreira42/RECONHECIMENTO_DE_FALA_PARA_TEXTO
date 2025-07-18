@@ -59,12 +59,13 @@ class ModelManager:
 
 # --- CLASSE GERENCIADORA DE TRANSCRIÇÃO (ATUALIZADA) ---
 class TranscriptionManager:
-    def __init__(self, dest_path, model_name, file_list, model_manager, keep_structure=False, source_path=None, max_concurrent_tasks=1):
+    # ATUALIZADO: Construtor não recebe mais `source_path`
+    def __init__(self, dest_path, model_name, file_list, model_manager, keep_structure=False, max_concurrent_tasks=1):
         self.dest_path = Path(dest_path)
         self.model_name = model_name
         self.model_manager = model_manager
         self.model = None
-        self.files_to_process = file_list
+        self.files_to_process = file_list # Agora uma lista de objetos: [{'path': ..., 'source': ...}]
         self.total_files = len(file_list)
         self.files_processed_count = 0
         self.status = "idle"
@@ -83,9 +84,19 @@ class TranscriptionManager:
         self.completed_files_lock = threading.Lock()
 
         self.keep_structure = keep_structure
-        self.source_path = Path(source_path) if source_path else None
+        # REMOVIDO: self.source_path foi substituído pela lógica dentro de _transcribe_single_file
         self.executor = None
-        self.pause_events = {}  # Pausa individual por arquivo
+        self.pause_events = {}
+
+    def prioritize_file(self, file_path):
+        # Remove o arquivo da fila e insere no início
+        idx = next((i for i, f in enumerate(self.files_to_process) if f['path'] == file_path), None)
+        if idx is not None:
+            file_info = self.files_to_process.pop(idx)
+            self.files_to_process.insert(0, file_info)
+            # Interrompe o atual e permite reprocessamento imediato
+            self.request_pause()
+            self.request_resume()
 
     def request_stop(self):
         print("[AVISO] Solicitação de parada recebida.")
@@ -175,14 +186,20 @@ class TranscriptionManager:
     def _transcribe_with_whisper(self, temp_wav_file, file_path_str, start_time):
         self.pause_event.wait()
         if self.stop_requested.is_set(): return None
-        
+        if self.model is None:
+            raise Exception("Modelo Whisper não carregado corretamente.")
         # Simulação de progresso para Whisper
         self._update_file_progress(file_path_str, 50, start_time)
         result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
+        self._update_file_progress(file_path_str, 100, start_time)
         return result['text'].strip()
 
-    def _transcribe_single_file(self, file_path_str):
+    def _transcribe_single_file(self, file_info):
         if self.stop_requested.is_set(): return None
+        
+        # Extrai as informações do objeto
+        file_path_str = file_info['path']
+        source_path_str = file_info.get('source') # .get() para lidar com arquivos avulsos (source: null)
         
         file_path = Path(file_path_str)
         start_time = time.time()
@@ -194,13 +211,22 @@ class TranscriptionManager:
             }
 
         self.pause_event.wait()
-        self._wait_file_pause(file_path_str)
+        if file_path_str in self.pause_events: self.pause_events[file_path_str].wait()
         if self.stop_requested.is_set(): return None
 
-        if self.keep_structure and self.source_path and file_path.is_relative_to(self.source_path):
-            output_txt_path = self.dest_path / file_path.relative_to(self.source_path).with_suffix('.txt')
+        # ATUALIZADO: Lógica de criação do caminho de saída para múltiplas origens
+        if self.keep_structure and source_path_str:
+            source_path = Path(source_path_str)
+            # Garante que o arquivo pertence à sua pasta de origem antes de calcular o caminho relativo
+            try:
+                relative_part = file_path.relative_to(source_path)
+                output_txt_path = self.dest_path / relative_part.with_suffix('.txt')
+            except ValueError:
+                output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
         else:
+            # Para arquivos avulsos ou se a estrutura não for mantida
             output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
+        
         output_txt_path.parent.mkdir(parents=True, exist_ok=True)
         
         temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav"
@@ -210,13 +236,13 @@ class TranscriptionManager:
                 raise Exception("Falha na conversão")
 
             self.pause_event.wait()
-            self._wait_file_pause(file_path_str)
+            if file_path_str in self.pause_events: self.pause_events[file_path_str].wait()
             if self.stop_requested.is_set(): return None
 
             transcript_text = None
             if self.model_name.startswith('whisper'):
                 transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str, start_time)
-            else:
+            else: # Vosk
                 transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str, start_time)
             
             if self.stop_requested.is_set(): return None
@@ -224,6 +250,7 @@ class TranscriptionManager:
             if transcript_text:
                 with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
                 with self.completed_files_lock:
+                    # O source_path retornado é o caminho do arquivo original, como esperado pelo frontend
                     self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)})
                 return file_path_str
             else:

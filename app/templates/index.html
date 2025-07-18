@@ -12,17 +12,9 @@
 
 <body class="h-screen flex flex-col select-none bg-gray-100 text-gray-800">
 
-  <!-- Cabeçalho -->
   <header class="flex items-center justify-between flex-wrap bg-white border-b border-gray-200 px-4 py-3 gap-4 shrink-0">
     <div class="flex items-center gap-x-6 gap-y-3 flex-wrap">
-        <!-- Inputs de Origem e Destino -->
-        <div>
-            <label for="origem" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">ORIGEM</label>
-            <div class="flex items-center">
-                <input id="origem" type="text" class="w-56 md:w-64 px-3 py-2 text-gray-900 text-sm border border-gray-300 rounded-l-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="Selecione uma pasta...">
-                <button id="select-origem-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
-            </div>
-        </div>
+        
         <div>
             <label for="destino" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">DESTINO</label>
             <div class="flex items-center">
@@ -30,7 +22,7 @@
                 <button id="select-destino-btn" type="button" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold px-4 py-2 rounded-r-md text-sm border-t border-r border-b border-gray-300">...</button>
             </div>
         </div>
-        <!-- Seletor de Modelo e Checkbox -->
+
         <div class="flex items-end gap-4">
             <div>
                 <label for="model-selector" class="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">MODELO</label>
@@ -44,12 +36,10 @@
                 </select>
             </div>
             <div class="flex items-center pb-2">
-                <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">Manter estrutura</label>
+                <input id="keep-structure-checkbox" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked> <label for="keep-structure-checkbox" class="ml-2 block text-sm text-gray-900">Manter estrutura</label>
             </div>
         </div>
     </div>
-    <!-- Botões de Ação -->
     <div class="flex items-center gap-2">
       <button id="start-btn" class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-play"></i>INICIAR</button>
       <button id="pause-btn" class="hidden flex items-center gap-2 bg-yellow-500 hover:bg-yellow-600 text-white font-bold px-4 py-2 rounded-md text-sm transition-all"><i class="fas fa-pause"></i>PAUSAR</button>
@@ -59,45 +49,38 @@
     </div>
   </header>
 
-  <!-- Corpo Principal (3 Colunas) -->
   <main id="drop-zone" class="flex-1 flex flex-col lg:flex-row p-4 gap-4 overflow-y-auto lg:overflow-y-hidden">
-    <!-- Coluna 1: Fila / Árvore de Diretórios -->
     <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
         <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
             <h2 class="text-base font-semibold text-gray-800">Fila de Processamento</h2>
             <div class="flex items-center gap-4">
+              <button id="add-folder-btn" title="Adicionar pasta de arquivos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-folder-plus"></i></button>
               <button id="add-file-btn" title="Adicionar arquivos avulsos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-blue-600"><i class="fas fa-plus"></i></button>
               <button id="clear-queue-btn" title="Limpar a fila" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
             </div>
         </header>
         <div id="file-tree-container" class="flex-1 overflow-y-auto scrollbar-thin p-2">
-            <!-- A árvore de diretórios será renderizada aqui -->
-        </div>
+            </div>
     </section>
 
-    <!-- Coluna 2: Em Progresso -->
     <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
         <header class="px-4 py-3 border-b border-gray-200 shrink-0">
             <h2 class="text-base font-semibold text-gray-800">Em Progresso</h2>
         </header>
         <ul id="in-progress-list" class="flex-1 overflow-y-auto scrollbar-thin">
-            <!-- Arquivos sendo processados aparecerão aqui -->
-        </ul>
+            </ul>
     </section>
 
-    <!-- Coluna 3: Concluídos -->
     <section class="flex flex-col w-full lg:w-1/3 bg-white rounded-lg border border-gray-200 shadow-sm">
         <header class="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
             <h2 class="text-base font-semibold text-gray-800">Concluídos</h2>
             <button id="clear-completed-btn" title="Limpar lista de concluídos" class="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"><i class="fas fa-broom"></i></button>
         </header>
         <ul id="completed-list" class="flex-1 overflow-y-auto scrollbar-thin">
-            <!-- Arquivos concluídos aparecerão aqui -->
-        </ul>
+            </ul>
     </section>
   </main>
   
-  <!-- Drop Zone Overlay -->
   <div id="drop-zone-overlay" class="hidden fixed inset-0 bg-blue-500 bg-opacity-20 border-4 border-dashed border-blue-600 rounded-lg flex items-center justify-center pointer-events-none z-50">
       <div class="text-center text-blue-800 font-bold text-2xl">
           <i class="fas fa-folder-plus fa-3x"></i>
@@ -105,20 +88,17 @@
       </div>
   </div>
 
-  <!-- Rodapé -->
   <footer class="bg-white border-t border-gray-200 px-4 py-2 text-sm shrink-0">
     <div class="w-full">
-        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600">Pronto para iniciar. Adicione arquivos à fila.</p>
+        <p id="progress-text-general" class="text-center text-xs mb-1 text-gray-600">Pronto para iniciar. Adicione arquivos ou pastas à fila.</p>
         <div class="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
             <div id="progress-bar-general" class="h-2 bg-blue-600 rounded-full transition-width duration-300" style="width: 0%;"></div>
         </div>
     </div>
   </footer>
 
-  <!-- Menu de Contexto -->
   <div id="contextMenu" class="hidden fixed z-50 w-56 bg-white rounded-md shadow-lg border py-1 text-sm"></div>
   
-  <!-- Modal de Configurações -->
   <div id="settings-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-40">
       <div class="bg-white rounded-lg shadow-xl w-full max-w-md">
           <div class="flex justify-between items-center p-4 border-b">
