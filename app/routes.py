@@ -94,6 +94,17 @@ def pause_file():
         return jsonify({'status': 'sucesso', 'message': f'Arquivo pausado: {file_path}'})
     return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
 
+# NOVO: Rota para retomar um arquivo específico
+@app.route('/resume-file', methods=['POST'])
+def resume_file():
+    global transcription_job
+    data = request.get_json()
+    file_path = data.get('file_path')
+    if transcription_job and file_path:
+        transcription_job.request_resume_file(file_path)
+        return jsonify({'status': 'sucesso', 'message': f'Arquivo retomado: {file_path}'})
+    return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
+
 @app.route('/get-progress')
 def get_progress():
     global transcription_job

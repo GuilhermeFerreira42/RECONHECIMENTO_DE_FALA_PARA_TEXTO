@@ -1,0 +1,310 @@
+Excelente feedback\! A atenção a esses detalhes de usabilidade é o que diferencia uma ferramenta boa de uma ótima. Você está no caminho certo para criar uma aplicação robusta e intuitiva.
+
+Vamos implementar exatamente o que você pediu. Preparei as modificações de código necessárias para:
+
+1.  **Unificar e expandir o menu de contexto**, tornando-o inteligente e consistente entre a coluna "Fila" e "Em Progresso".
+2.  **Adicionar feedback visual imediato** ao clicar no botão "RETOMAR" principal.
+
+-----
+
+### **Passo 1: Unificando o Menu de Contexto (`ui.js`)**
+
+Vamos refatorar a função `showContextMenu` para que ela construa o menu dinamicamente com base em onde o usuário clica e no estado atual do processo. Isso também incluirá a nova funcionalidade de "Retomar este arquivo".
+
+**Arquivo:** `app/static/js/ui.js`
+
+```javascript
+// ==================================================================
+// Arquivo: app/static/js/ui.js (Atualizado)
+// Principais mudanças:
+// - O menu de contexto agora é unificado e mais inteligente.
+// - Adicionada a opção "Retomar este arquivo" para itens pausados.
+// - O menu mostra opções diferentes dependendo se o processo está rodando, pausado ou ocioso.
+// ==================================================================
+
+console.log("ui.js (Atualizado) foi carregado.");
+
+function waitForPywebviewApi() {
+    return new Promise((resolve, reject) => {
+        const intervalId = setInterval(() => {
+            if (window.pywebview && window.pywebview.api) {
+                clearInterval(intervalId);
+                resolve(window.pywebview.api);
+            }
+        }, 100);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        const api = await waitForPywebviewApi();
+        const contextMenu = document.getElementById('contextMenu');
+        if (!contextMenu) return;
+
+        let currentTargetItem = null;
+
+        function closeContextMenu() {
+            contextMenu.classList.add('hidden');
+            currentTargetItem = null;
+        }
+
+        // ATUALIZADO: Lógica do menu de contexto unificada e inteligente
+        function showContextMenu(event, element) {
+            event.preventDefault();
+            event.stopPropagation();
+            currentTargetItem = element;
+
+            const isCompletedItem = currentTargetItem.closest('#completed-list');
+            const isInProgressItem = currentTargetItem.closest('#in-progress-list');
+            const isFile = currentTargetItem.dataset.filepath;
+
+            // Determina o estado geral da aplicação
+            const isProcessing = !document.getElementById('start-btn').classList.contains('hidden');
+
+            let menuContent = '';
+
+            if (isCompletedItem) {
+                menuContent = `
+                    <a href="#" data-action="open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Transcrição (.txt)</a>
+                    <a href="#" data-action="open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>
+                `;
+            } else if (isFile) { // Para itens na Fila ou Em Progresso
+                // Ações comuns
+                menuContent += `<a href="#" data-action="open-file" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Mídia Original</a>`;
+                menuContent += `<a href="#" data-action="open-location" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Abrir Local do Arquivo</a>`;
+                
+                if (isProcessing) { // Se o processo principal está parado/ocioso
+                    menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
+                    menuContent += `<a href="#" data-action="move-top" class="block px-4 py-2 text-gray-800 hover:bg-gray-100">Mover para o topo</a>`;
+                    menuContent += `<a href="#" data-action="remove" class="block px-4 py-2 text-red-600 hover:bg-red-100">Remover da Fila</a>`;
+                } else { // Se o processo principal está rodando ou pausado
+                    menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
+                    menuContent += `<a href="#" data-action="prioritize" class="block px-4 py-2 text-blue-700 hover:bg-blue-100 font-semibold">Processar este agora</a>`;
+                    
+                    // Verifica o status do item específico (pausado ou rodando)
+                    const isPaused = currentTargetItem.querySelector('.fa-pause-circle');
+                    if (isPaused) {
+                         menuContent += `<a href="#" data-action="resume-item" class="block px-4 py-2 text-green-600 hover:bg-green-100">Retomar este arquivo</a>`;
+                    } else {
+                         menuContent += `<a href="#" data-action="pause-item" class="block px-4 py-2 text-yellow-600 hover:bg-yellow-100">Pausar este arquivo</a>`;
+                    }
+                }
+            } else {
+                return; // Não mostra menu se não for um item de arquivo válido
+            }
+
+            contextMenu.innerHTML = menuContent;
+            
+            // Posiciona e exibe o menu
+            const { clientX: mouseX, clientY: mouseY } = event;
+            contextMenu.style.top = `${mouseY}px`;
+            contextMenu.style.left = `${mouseX}px`;
+            contextMenu.classList.remove('hidden');
+        }
+
+        // NOVO: Listener de clique centralizado para o menu de contexto
+        contextMenu.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const action = e.target.dataset.action;
+            if (!action || !currentTargetItem) return;
+
+            const filePath = currentTargetItem.dataset.filepath;
+
+            switch (action) {
+                case 'open-file':
+                    api.open_file_natively(filePath);
+                    break;
+                case 'open-location':
+                    api.open_folder_in_explorer(filePath);
+                    break;
+                case 'remove':
+                    // Lógica para remover da fila (precisaria ser implementada em main.js)
+                    console.log(`Remover: ${filePath}`);
+                    break;
+                case 'move-top':
+                     // Lógica para mover ao topo (precisaria ser implementada em main.js)
+                    console.log(`Mover ao topo: ${filePath}`);
+                    break;
+                case 'prioritize':
+                    await fetch('/prioritize-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+                case 'pause-item':
+                    await fetch('/pause-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+                case 'resume-item': // NOVA AÇÃO
+                    await fetch('/resume-file', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ file_path: filePath })
+                    });
+                    break;
+            }
+            closeContextMenu();
+        });
+
+
+        document.addEventListener('click', (e) => {
+            if (!contextMenu.contains(e.target)) {
+                closeContextMenu();
+            }
+        });
+
+        document.addEventListener('contextmenu', (e) => {
+            const li = e.target.closest('li[data-filepath]');
+            if (li) {
+                showContextMenu(e, li);
+            } else {
+                closeContextMenu();
+            }
+        });
+        
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeContextMenu();
+        });
+
+    } catch (error) {
+        console.error("ui.js: API não encontrada.", error);
+    }
+});
+```
+
+-----
+
+### **Passo 2: Adicionando Feedback Visual Imediato (`main.js`)**
+
+Agora, vamos fazer a interface responder *instantaneamente* ao clique no botão "RETOMAR".
+
+**Arquivo:** `app/static/js/main.js`
+
+```javascript
+// A maior parte do arquivo main.js continua a mesma.
+// A única mudança é no Event Listener do botão 'resumeBtn'.
+
+// ... (todo o código de main.js até o Event Listener do resumeBtn)
+
+    stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
+    pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
+
+    // ATUALIZADO: Adicionado feedback visual imediato ao retomar
+    resumeBtn.addEventListener('click', () => {
+        // 1. Atualiza a UI imediatamente para dar feedback ao usuário
+        updateUIForState('running'); // Troca os botões de controle principais
+        
+        // 2. Altera o ícone de todos os arquivos pausados para "processando"
+        inProgressList.querySelectorAll('i.fa-pause-circle').forEach(icon => {
+            const statusSpan = icon.parentElement;
+            statusSpan.innerHTML = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+        });
+
+        // 3. Envia a requisição para o backend confirmar a ação
+        fetch('/resume-processing', { method: 'POST' });
+    });
+
+// ... (o resto do código de main.js continua igual) ...
+```
+
+-----
+
+### **Passo 3: Criando a Nova Rota no Backend (`routes.py`)**
+
+Para que a opção "Retomar este arquivo" do novo menu funcione, precisamos criar a rota correspondente na API.
+
+**Arquivo:** `app/routes.py`
+
+```python
+# A maior parte do arquivo routes.py continua a mesma.
+# Adicione a nova rota '/resume-file' depois da rota '/pause-file'.
+
+# ... (código de routes.py até a rota /pause-file) ...
+
+@app.route('/pause-file', methods=['POST'])
+def pause_file():
+    global transcription_job
+    data = request.get_json()
+    file_path = data.get('file_path')
+    if transcription_job and file_path:
+        transcription_job.request_pause_file(file_path)
+        return jsonify({'status': 'sucesso', 'message': f'Arquivo pausado: {file_path}'})
+    return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
+
+# NOVO: Rota para retomar um arquivo específico
+@app.route('/resume-file', methods=['POST'])
+def resume_file():
+    global transcription_job
+    data = request.get_json()
+    file_path = data.get('file_path')
+    if transcription_job and file_path:
+        transcription_job.request_resume_file(file_path)
+        return jsonify({'status': 'sucesso', 'message': f'Arquivo retomado: {file_path}'})
+    return jsonify({'status': 'erro', 'message': 'Arquivo não encontrado ou processo não iniciado.'}), 400
+
+
+@app.route('/get-progress')
+# ... (o resto do arquivo routes.py continua igual) ...
+```
+
+-----
+
+### **Passo 4: Implementando a Lógica no Transcritor (`transcriber.py`)**
+
+Finalmente, adicionamos o método `request_resume_file` na classe `TranscriptionManager` para que o backend possa executar a ação.
+
+**Arquivo:** `app/transcriber.py`
+
+```python
+# A maior parte do arquivo transcriber.py continua a mesma.
+# Adicione o novo método 'request_resume_file' depois de 'request_pause_file'.
+
+
+# ... (código de transcriber.py até o método request_pause_file) ...
+
+    def request_pause_file(self, file_path):
+        """Pausa apenas o arquivo especificado."""
+        if file_path not in self.pause_events:
+            self.pause_events[file_path] = threading.Event()
+        self.pause_events[file_path].clear()
+        with self.files_in_progress_lock:
+            if file_path in self.files_in_progress:
+                self.files_in_progress[file_path]['status'] = 'paused'
+                print(f"[INFO] Arquivo pausado individualmente: {file_path}")
+
+
+    # NOVO: Método para retomar um arquivo específico
+    def request_resume_file(self, file_path):
+        """Retoma apenas o arquivo especificado."""
+        if file_path in self.pause_events:
+            self.pause_events[file_path].set()
+        with self.files_in_progress_lock:
+            if file_path in self.files_in_progress:
+                self.files_in_progress[file_path]['status'] = 'running'
+                print(f"[INFO] Arquivo retomado individualmente: {file_path}")
+
+
+    def _wait_file_pause(self, file_path):
+# ... (o resto do arquivo transcriber.py continua igual) ...
+```
+
+-----
+
+### **Como Testar as Melhorias**
+
+1.  **Reinicie a Aplicação**: Execute `python run.py`.
+2.  **Teste o Menu de Contexto Unificado**:
+      * Adicione pastas/arquivos à fila.
+      * **Com o processo parado**, clique com o botão direito em um item na primeira coluna ("Fila"). O menu deve mostrar "Mover para o topo" e "Remover".
+      * **Inicie o processo**. Agora, clique com o botão direito no mesmo item na primeira coluna. O menu deve mostrar "Processar este agora" e "Pausar este arquivo".
+      * Clique com o botão direito em um item na segunda coluna ("Em Progresso"). O menu deve ser idêntico ao da primeira coluna.
+      * Pause um arquivo individualmente usando o menu. Clique novamente com o botão direito sobre ele. A opção deve mudar para "Retomar este arquivo".
+3.  **Teste o Feedback Visual**:
+      * Inicie o processo e pause-o usando o botão "PAUSAR" principal. Todos os ícones ativos devem mudar para o de pausa amarelo.
+      * Clique no botão "RETOMAR" principal. Observe se os botões de controle trocam **imediatamente** e se os ícones amarelos de pausa voltam a ser engrenagens azuis girando **instantaneamente**, antes mesmo da próxima atualização do progresso.
+
+Com essas alterações, a experiência do usuário será mais fluida, consistente e responsiva.

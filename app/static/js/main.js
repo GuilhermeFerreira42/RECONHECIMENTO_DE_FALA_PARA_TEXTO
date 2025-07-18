@@ -353,7 +353,21 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
     pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
-    resumeBtn.addEventListener('click', () => fetch('/resume-processing', { method: 'POST' }));
+
+    // ATUALIZADO: Adicionado feedback visual imediato ao retomar
+    resumeBtn.addEventListener('click', () => {
+        // 1. Atualiza a UI imediatamente para dar feedback ao usuário
+        updateUIForState('running'); // Troca os botões de controle principais
+        
+        // 2. Altera o ícone de todos os arquivos pausados para "processando"
+        inProgressList.querySelectorAll('i.fa-pause-circle').forEach(icon => {
+            const statusSpan = icon.parentElement;
+            statusSpan.innerHTML = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+        });
+
+        // 3. Envia a requisição para o backend confirmar a ação
+        fetch('/resume-processing', { method: 'POST' });
+    });
     
     // --- Lógica do Modal de Configurações ---
     settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
