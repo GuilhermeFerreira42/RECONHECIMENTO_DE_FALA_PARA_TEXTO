@@ -130,27 +130,53 @@ html.dark .scrollbar-thin {
     scrollbar-color: #4b5563 transparent;
 }
 
-/* NOVO: Estilo para seleção sincronizada de item */
+/* Estilo para seleção de item (não confundir com status) */
 .selected-item {
-    background-color: #dbeafe !important; /* light blue */
-    border: 1px solid #93c5fd;
+    background-color: #dbeafe !important; /* Tailwind: blue-200 */
+    border: 1px solid #93c5fd !important; /* Tailwind: blue-300 */
 }
 
 html.dark .selected-item {
-    background-color: #374151 !important; /* dark gray */
-    border: 1px solid #4b5563;
+    background-color: #374151 !important; /* Tailwind: gray-700 */
+    border: 1px solid #4b5563 !important; /* Tailwind: gray-600 */
 }
 
-/* **MODIFICADO**: Estilos para o status da pasta */
-.folder-processing > summary {
-    background-color: #e0f2fe; /* light blue-100 */
+/* --- **NOVOS ESTILOS DE STATUS** --- */
+
+/* Status: Em Processamento (Azul claro) */
+.status-processing {
+    background-color: #e0f2fe; /* Tailwind: sky-100 */
 }
-.folder-completed > summary {
-    background-color: #dcfce7; /* light green-100 */
+html.dark .status-processing {
+    background-color: #0c4a6e; /* Tailwind: sky-900 */
 }
-html.dark .folder-processing > summary {
-    background-color: #374151; /* dark gray-800 */
+
+/* Status: Pausado (Amarelo/Laranja claro) */
+.status-paused {
+    background-color: #fef9c3; /* Tailwind: yellow-100 */
 }
-html.dark .folder-completed > summary {
-    background-color: #166534; /* dark green-800 */
+html.dark .status-paused {
+    background-color: #78350f; /* Tailwind: amber-900 */
+}
+
+/* Status: Concluído (Verde claro) */
+.status-completed {
+    background-color: #dcfce7; /* Tailwind: green-100 */
+}
+html.dark .status-completed {
+    background-color: #166534; /* Tailwind: green-800 */
+}
+
+/* Aplica os estilos de status às pastas na árvore de arquivos */
+.folder-status-processing > summary {
+    background-color: #e0f2fe; /* Tailwind: sky-100 */
+}
+.folder-status-completed > summary {
+    background-color: #dcfce7; /* Tailwind: green-100 */
+}
+html.dark .folder-status-processing > summary {
+    background-color: #0c4a6e; /* Tailwind: sky-900 */
+}
+html.dark .folder-status-completed > summary {
+    background-color: #166534; /* Tailwind: green-800 */
 }

@@ -1,11 +1,208 @@
+Claro! Entendi perfeitamente as solicitações de melhoria. O objetivo é refinar o feedback visual para que o usuário tenha clareza imediata sobre o estado de cada arquivo e pasta (em processamento, pausado ou concluído), garantindo que as cores sejam distintas e intuitivas.
+
+Preparei as alterações necessárias nos arquivos style.css e main.js. Os outros arquivos (index.html, ui.js, transcriber.py) não precisam de modificações, pois as funcionalidades de base (ícones, scroll, pausa real, etc.) já estão corretas conforme o checklist.
+
+Pode substituir o conteúdo dos seus arquivos por estes.
+
+1. app/static/css/style.css (Novos Estilos de Status)
+Adicionamos e ajustamos as classes de CSS para dar o feedback visual com cores de fundo para cada estado, tanto no modo claro quanto no escuro, e garantimos que elas sejam diferentes da cor de seleção.
+
+CSS
+
+/* Conteúdo de app/static/css/style.css */
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #F8F9FA;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* --- Estilos para o Tema Escuro (RNF3 - CORRIGIDO) --- */
+html.dark body {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+
+html.dark header, 
+html.dark footer,
+html.dark section {
+  background-color: #1f2937;
+  border-color: #374151;
+}
+
+html.dark h2,
+html.dark h3,
+html.dark label,
+html.dark #progress-text-general,
+html.dark .text-sm {
+  color: #d1d5db;
+}
+
+html.dark label[for="keep-structure-checkbox"] {
+    color: #f3f4f6;
+}
+
+html.dark input[type="text"],
+html.dark input[type="number"],
+html.dark select {
+    background-color: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+html.dark input::placeholder {
+    color: #9ca3af;
+}
+
+html.dark button,
+html.dark button:disabled {
+    opacity: 1.0;
+}
+html.dark button:disabled {
+    opacity: 0.5;
+}
+html.dark #select-origem-btn,
+html.dark #select-destino-btn {
+    background-color: #374151;
+    border-color: #4b5563;
+}
+html.dark #select-origem-btn:hover,
+html.dark #select-destino-btn:hover {
+    background-color: #4b5563;
+}
+
+html.dark .file-item,
+html.dark .folder-item > summary {
+    color: #d1d5db !important;
+}
+
+html.dark li.file-item:hover,
+html.dark details.folder-item > summary:hover {
+    background-color: #374151;
+}
+
+/* Correção para Menus e Modais */
+html.dark #contextMenu,
+html.dark #settings-modal .bg-white {
+    background-color: #27272a;
+    border-color: #4b5563;
+}
+
+html.dark #contextMenu a {
+    color: #d1d5db;
+}
+html.dark #contextMenu a:hover {
+    background-color: #3b82f6;
+    color: #ffffff;
+}
+html.dark #contextMenu .text-red-600 {
+    color: #f87171 !important;
+}
+html.dark #contextMenu a.hover\:bg-red-100:hover {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+html.dark #settings-modal .border-b,
+html.dark #settings-modal .border-t,
+html.dark #contextMenu .border-t {
+    border-color: #4b5563;
+}
+html.dark #settings-modal #close-settings-modal:hover {
+    color: #ffffff;
+}
+html.dark #settings-modal .bg-gray-50 {
+    background-color: #1f2937;
+}
+
+/* --- Fim dos Estilos do Tema Escuro --- */
+
+/* Scrollbar thin for lists */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border-radius: 3px;
+}
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+html.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: #4b5563;
+}
+html.dark .scrollbar-thin {
+    scrollbar-color: #4b5563 transparent;
+}
+
+/* Estilo para seleção de item (não confundir com status) */
+.selected-item {
+    background-color: #dbeafe !important; /* Tailwind: blue-200 */
+    border: 1px solid #93c5fd !important; /* Tailwind: blue-300 */
+}
+
+html.dark .selected-item {
+    background-color: #374151 !important; /* Tailwind: gray-700 */
+    border: 1px solid #4b5563 !important; /* Tailwind: gray-600 */
+}
+
+/* --- **NOVOS ESTILOS DE STATUS** --- */
+
+/* Status: Em Processamento (Azul claro) */
+.status-processing {
+    background-color: #e0f2fe; /* Tailwind: sky-100 */
+}
+html.dark .status-processing {
+    background-color: #0c4a6e; /* Tailwind: sky-900 */
+}
+
+/* Status: Pausado (Amarelo/Laranja claro) */
+.status-paused {
+    background-color: #fef9c3; /* Tailwind: yellow-100 */
+}
+html.dark .status-paused {
+    background-color: #78350f; /* Tailwind: amber-900 */
+}
+
+/* Status: Concluído (Verde claro) */
+.status-completed {
+    background-color: #dcfce7; /* Tailwind: green-100 */
+}
+html.dark .status-completed {
+    background-color: #166534; /* Tailwind: green-800 */
+}
+
+/* Aplica os estilos de status às pastas na árvore de arquivos */
+.folder-status-processing > summary {
+    background-color: #e0f2fe; /* Tailwind: sky-100 */
+}
+.folder-status-completed > summary {
+    background-color: #dcfce7; /* Tailwind: green-100 */
+}
+html.dark .folder-status-processing > summary {
+    background-color: #0c4a6e; /* Tailwind: sky-900 */
+}
+html.dark .folder-status-completed > summary {
+    background-color: #166534; /* Tailwind: green-800 */
+}
+2. app/static/js/main.js (Lógica de Controle Visual)
+Este arquivo agora contém a lógica para aplicar as novas classes de CSS dinamicamente, com base no estado recebido do back-end. A função updateFolderSpinners foi substituída por updateStatusStyles, que agora gerencia o status de pastas e arquivos.
+
+JavaScript
+
 // ==================================================================
-// Arquivo: app/static/js/main.js (Atualizado para Múltiplas Origens)
+// Arquivo: app/static/js/main.js (Atualizado para Feedback Visual)
 // Principais mudanças:
-// - A fila `fileQueue` agora armazena objetos {path, source} para rastrear a origem.
-// - Remoção da dependência do input 'origem'.
-// - Novo botão `add-folder-btn` para adicionar pastas à fila.
-// - `updateFileTree` renderiza grupos de arquivos baseados em suas pastas de origem.
-// - A lógica de `start-processing` envia a fila estruturada para o backend.
+// - Scroll automático para o item selecionado.
+// - Lógica de "Mover para o topo" removida.
+// - Nova função `updateStatusStyles` para colorir itens e pastas
+//   com base no seu estado (processando, pausado, concluído).
 // ==================================================================
 
 function waitForPywebviewApi() {
@@ -29,12 +226,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const resumeBtn = document.getElementById('resume-btn');
     const settingsBtn = document.getElementById('settings-btn');
     
-    // REMOVIDO: const origemInput = document.getElementById('origem');
     const destinoInput = document.getElementById('destino');
-    // REMOVIDO: const selectOrigemBtn = document.getElementById('select-origem-btn');
     const selectDestinoBtn = document.getElementById('select-destino-btn');
     
-    // NOVO: Botão para adicionar pastas
     const addFolderBtn = document.getElementById('add-folder-btn');
     const addFileBtn = document.getElementById('add-file-btn');
     const clearQueueBtn = document.getElementById('clear-queue-btn');
@@ -51,20 +245,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const closeSettingsModalBtn = document.getElementById('close-settings-modal');
     const saveSettingsBtn = document.getElementById('save-settings-btn');
     const maxConcurrentInput = document.getElementById('max-concurrent-tasks');
-
     const dropZone = document.getElementById('drop-zone');
     const dropZoneOverlay = document.getElementById('drop-zone-overlay');
     let progressInterval = null;
-
-    // ATUALIZADO: fileQueue agora é um array de objetos para rastrear a origem.
-    // Formato: { path: "C:/...", source: "C:/Origem1" } ou { path: "D:/...", source: null }
-    let fileQueue = []; 
+    let fileQueue = [];
 
     // --- Funções da Árvore de Diretórios ---
     function buildFileTree(filePaths, basePath) {
         const tree = {};
         filePaths.forEach(path => {
-            // Usa o basePath para extrair o caminho relativo corretamente
             const relativePath = path.replace(basePath, '').replace(/^[\/\\]/, '');
             const parts = relativePath.split(/[\/\\]/);
             let currentLevel = tree;
@@ -93,12 +282,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             const itemData = node[key];
 
             if (itemData._isLeaf) {
-                // É um arquivo
                 li.className = 'file-item text-sm text-gray-700 p-1 rounded-md';
                 li.dataset.filepath = itemData._fullPath;
                 li.innerHTML = `<i class="fas fa-file-audio text-gray-500 mr-2"></i>${key}`;
             } else {
-                // É uma pasta
                 li.innerHTML = `<details class="folder-item" open>
                                   <summary class="p-1 cursor-pointer hover:bg-gray-100 rounded-md"><i class="fas fa-folder text-yellow-500 mr-2"></i>${key}</summary>
                                 </details>`;
@@ -133,7 +320,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             destinoInput.classList.toggle('border-red-500', !isValid);
         }
     });
-
     // --- Tema escuro ---
     const darkModeToggle = document.getElementById('dark-mode-toggle');
     if (darkModeToggle) {
@@ -142,7 +328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ATUALIZADO: Função reescrita para lidar com múltiplas origens
     function updateFileTree() {
         fileTreeContainer.innerHTML = '';
         if (fileQueue.length === 0) {
@@ -150,24 +335,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 1. Agrupar arquivos por sua pasta de origem (source)
         const groupedBySource = fileQueue.reduce((acc, file) => {
-            const source = file.source || 'avulsos'; // Agrupa arquivos avulsos
+            const source = file.source || 'avulsos';
             if (!acc[source]) {
                 acc[source] = [];
             }
             acc[source].push(file.path);
             return acc;
         }, {});
-
-        // 2. Renderizar cada grupo
+        
         for (const source in groupedBySource) {
             const files = groupedBySource[source];
             const sourceName = source === 'avulsos' ? 'Arquivos Avulsos' : source.split(/[\\/]/).pop();
             
             const groupContainer = document.createElement('div');
             groupContainer.className = 'mb-4';
-            groupContainer.dataset.sourcePath = source; // Adiciona o atributo para identificar a pasta
+            groupContainer.dataset.sourcePath = source; // Atributo para identificar o grupo
 
             const header = document.createElement('h3');
             header.className = 'text-sm font-semibold text-gray-600 p-1 border-b mb-1';
@@ -205,18 +388,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Seleção sincronizada entre blocos ---
+    // --- Seleção sincronizada e Scroll Automático ---
     function clearAllSelections() {
         document.querySelectorAll('.selected-item').forEach(el => el.classList.remove('selected-item'));
     }
+
     function selectItemInAllPanels(filepath) {
         clearAllSelections();
         document.querySelectorAll(`[data-filepath="${filepath}"]`).forEach(el => {
             el.classList.add('selected-item');
-            // **MODIFICADO**: Scroll automático para o item selecionado.
             el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
     }
+
     fileTreeContainer.addEventListener('click', e => {
         const li = e.target.closest('li[data-filepath]');
         if (li) selectItemInAllPanels(li.dataset.filepath);
@@ -226,88 +410,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (li) selectItemInAllPanels(li.dataset.filepath);
     });
 
-    // --- Remoção e movimentação sincronizada via eventos do menu de contexto ---
+    // --- Remoção sincronizada via eventos do menu de contexto ---
     document.addEventListener('queue:action', e => {
         const { action, filePath } = e.detail;
         if (action === 'remove') {
-            // Remove da fila
             fileQueue = fileQueue.filter(item => item.path !== filePath);
-            // Remove da UI
             document.querySelectorAll(`[data-filepath="${filePath}"]`).forEach(el => el.remove());
             updateFileTree();
-        } else if (action === 'move-top') {
-            const idx = fileQueue.findIndex(item => item.path === filePath);
-            if (idx > 0) {
-                const [item] = fileQueue.splice(idx, 1);
-                fileQueue.unshift(item);
-                updateFileTree();
-            }
-        }
+        } 
     });
-
-    // --- Spinner em pastas com arquivos em processamento ---
-    function updateFolderSpinners(filesInProgress) {
-        // Remove todos os spinners antigos
-        fileTreeContainer.querySelectorAll('.folder-item summary .fa-cog').forEach(el => el.remove());
-        // Para cada pasta, verifica se contém algum arquivo em progresso
-        fileTreeContainer.querySelectorAll('details.folder-item').forEach(details => {
-            const summary = details.querySelector('summary');
-            const folderPath = summary.textContent.trim();
-            // Caminhos dos arquivos em progresso
-            const files = Object.keys(filesInProgress);
-            let hasActive = false;
-            files.forEach(fp => {
-                if (summary && fp.includes(folderPath)) hasActive = true;
-            });
-            if (hasActive) {
-                const spinner = document.createElement('i');
-                spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
-                summary.appendChild(spinner);
-            }
-        });
-    }
-
-    // --- Nova função para aplicar status visual ---
+    
+    // **MODIFICADO**: Função totalmente nova para gerenciar o feedback visual
     function updateStatusStyles(filesInProgress, completedFiles) {
-        // Limpa todos os status antigos
-        fileTreeContainer.querySelectorAll('.status-processing, .status-paused, .status-completed').forEach(el => {
-            el.classList.remove('status-processing', 'status-paused', 'status-completed');
-        });
-        fileTreeContainer.querySelectorAll('.folder-status-processing, .folder-status-completed').forEach(el => {
-            el.classList.remove('folder-status-processing', 'folder-status-completed');
-        });
+        // --- 1. Estilo das PASTAS na árvore de arquivos ---
+        const completedPaths = new Set(completedFiles.map(f => f.source_path));
+        const inProgressPaths = new Set(Object.keys(filesInProgress));
 
-        // Aplica status em arquivos
-        Object.entries(filesInProgress).forEach(([path, info]) => {
-            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${path}"]`);
-            fileEls.forEach(el => {
-                if (info.status === 'paused') {
-                    el.classList.add('status-paused');
-                } else if (info.status === 'running') {
-                    el.classList.add('status-processing');
-                }
-            });
-        });
-        completedFiles.forEach(f => {
-            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${f.source_path}"]`);
-            fileEls.forEach(el => el.classList.add('status-completed'));
-        });
-
-        // Aplica status em pastas
         fileTreeContainer.querySelectorAll('div[data-source-path]').forEach(groupContainer => {
             const sourcePath = groupContainer.dataset.sourcePath;
-            if (sourcePath === 'avulsos') return;
+            if (sourcePath === 'avulsos') return; // Ignora arquivos avulsos
+
+            // Limpa classes de status antigas da pasta
+            groupContainer.classList.remove('folder-status-processing', 'folder-status-completed');
+
             const filesInGroup = fileQueue.filter(f => f.source === sourcePath).map(f => f.path);
             if (filesInGroup.length === 0) return;
-            const inProgressPaths = Object.keys(filesInProgress);
-            const completedPaths = completedFiles.map(f => f.source_path);
-            const isAnyPaused = filesInGroup.some(fp => filesInProgress[fp] && filesInProgress[fp].status === 'paused');
-            const isAnyInProgress = filesInGroup.some(fp => inProgressPaths.includes(fp) && filesInProgress[fp].status === 'running');
-            const areAllCompleted = filesInGroup.every(fp => completedPaths.includes(fp));
+
+            const isAnyInProgress = filesInGroup.some(fp => inProgressPaths.has(fp));
+            const areAllCompleted = filesInGroup.every(fp => completedPaths.has(fp));
+
             if (areAllCompleted) {
                 groupContainer.classList.add('folder-status-completed');
-            } else if (isAnyPaused) {
-                groupContainer.classList.add('folder-status-processing'); // Pausado também é considerado "em andamento" para pasta
             } else if (isAnyInProgress) {
                 groupContainer.classList.add('folder-status-processing');
             }
@@ -323,12 +456,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 progressBarGeneral.style.width = `${data.progress_general}%`;
                 progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
                 
-                // NOVO: Lógica para exibir toda a fila em "Em progresso"
+                // --- 2. Estilo dos ARQUIVOS na lista "Em Progresso" ---
                 if (data.status === 'running' || data.status === 'paused') {
-                    if (inProgressList.innerHTML === '') { // Renderiza a lista apenas uma vez no início
+                    if (inProgressList.innerHTML === '') {
                         fileQueue.forEach(file => {
                             const li = document.createElement('li');
-                            li.className = 'flex flex-col px-4 py-3 border-b border-gray-100';
+                            // Adicionamos a classe 'status-processing' por padrão
+                            li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 status-processing';
                             li.dataset.filepath = file.path;
                             li.innerHTML = `
                                 <div class="flex items-center gap-3">
@@ -344,40 +478,50 @@ document.addEventListener('DOMContentLoaded', async () => {
                         });
                     }
 
-                    // Atualiza os itens individuais
                     Object.entries(data.files_in_progress).forEach(([path, info]) => {
                         const li = inProgressList.querySelector(`li[data-filepath="${path}"]`);
                         if (li) {
                             const iconSpan = li.querySelector('.status-icon');
                             const percentSpan = li.querySelector('.progress-percent');
                             const progressBar = li.querySelector('.progress-bar');
+                            
+                            // Limpa classes de status antigas do item
+                            li.classList.remove('status-paused', 'status-processing');
 
                             let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
                             if (info.status === 'paused') {
                                 statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                                li.classList.add('status-paused'); // Adiciona classe de pausado
+                            } else {
+                                li.classList.add('status-processing'); // Adiciona classe de processando
                             }
+
                             iconSpan.innerHTML = statusIcon;
                             percentSpan.textContent = `${Math.round(info.progress || 0)}%`;
                             progressBar.style.width = `${info.progress || 0}%`;
                         }
                     });
-                    // Atualiza spinners nas pastas
-                    updateFolderSpinners(data.files_in_progress);
                 }
-
-
+                
+                // --- 3. Criação de itens na lista "Concluídos" ---
                 data.completed_files.forEach(fileInfo => {
                     const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
                     const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${sourcePath}"]`);
-                    if (treeNode) treeNode.innerHTML += ' <i class="fas fa-check-circle text-green-600 ml-1"></i>';
+                    // Adiciona o selo de verificação no item da árvore
+                    if (treeNode && !treeNode.querySelector('.fa-check-circle')) {
+                         treeNode.innerHTML += ' <i class="fas fa-check-circle text-green-600 ml-1"></i>';
+                    }
                     
-                    // Remove da lista "Em Progresso"
                     const inProgressNode = inProgressList.querySelector(`li[data-filepath="${sourcePath}"]`);
                     if (inProgressNode) inProgressNode.remove();
 
+                    // Evita adicionar duplicatas à lista de concluídos
+                    if (completedList.querySelector(`li[data-filepath="${fileInfo.output_path}"]`)) return;
+
                     const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
                     const li = document.createElement('li');
-                    li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100';
+                    // Adiciona a classe de concluído
+                    li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 status-completed';
                     li.dataset.filepath = fileInfo.output_path;
                     li.innerHTML = `
                         <i class="fas fa-check-circle text-green-600"></i>
@@ -388,6 +532,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     `;
                     completedList.prepend(li);
                 });
+                
+                // Chamada centralizada para atualizar os estilos de status
+                updateStatusStyles(data.files_in_progress, data.completed_files);
 
                 if (data.status === 'completed' || data.status === 'stopped') {
                     clearInterval(progressInterval);
@@ -399,20 +546,15 @@ document.addEventListener('DOMContentLoaded', async () => {
                         progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
                     }
                 }
-                // **MODIFICADO**: Chama a nova função de status visual
-                updateStatusStyles(data.files_in_progress, data.completed_files);
             });
     }
 
     // --- Event Listeners ---
-    // NOVO: Event listener para adicionar pastas
     addFolderBtn.addEventListener('click', async () => {
         const folderPath = await api.open_folder_dialog('Selecione a Pasta de Origem');
         if (folderPath) {
             const files = await api.scan_folder_recursively(folderPath);
-            // Adiciona cada arquivo com sua pasta de origem
             files.forEach(file => {
-                // Evita duplicatas
                 if (!fileQueue.some(item => item.path === file)) {
                     fileQueue.push({ path: file.replace(/\\/g, '/'), source: folderPath.replace(/\\/g, '/') });
                 }
@@ -420,7 +562,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateFileTree();
         }
     });
-    
+
     selectDestinoBtn.addEventListener('click', async () => {
         const folderPath = await api.open_folder_dialog('Selecione a Pasta de Destino');
         if (folderPath) destinoInput.value = folderPath;
@@ -431,7 +573,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (files && files.length > 0) {
             files.forEach(file => {
                 const normalizedPath = file.replace(/\\/g, '/');
-                // Adiciona como arquivo avulso (source: null)
                 if (!fileQueue.some(item => item.path === normalizedPath)) {
                     fileQueue.push({ path: normalizedPath, source: null });
                 }
@@ -456,9 +597,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         
-        // ATUALIZADO: O corpo da requisição agora envia a fila estruturada.
         const requestBody = {
-            file_list: fileQueue, // Envia o array de objetos
+            file_list: fileQueue,
             dest_path: destinoInput.value,
             keep_structure: document.getElementById('keep-structure-checkbox').checked,
             model_name: document.getElementById('model-selector').value
@@ -472,8 +612,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'sucesso') {
-                completedList.innerHTML = ''; // Limpa concluídos antigos
-                inProgressList.innerHTML = ''; // Limpa a lista para ser recriada pelo updateProgress
+                completedList.innerHTML = '';
+                inProgressList.innerHTML = '';
                 progressInterval = setInterval(updateProgress, 1000);
             } else {
                 alert(`Erro: ${data.message}`);
@@ -483,25 +623,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     stopBtn.addEventListener('click', () => fetch('/stop-processing', { method: 'POST' }));
     pauseBtn.addEventListener('click', () => fetch('/pause-processing', { method: 'POST' }));
-
-    // ATUALIZADO: Adicionado feedback visual imediato ao retomar
+    
     resumeBtn.addEventListener('click', () => {
-        // 1. Atualiza a UI imediatamente para dar feedback ao usuário
-        updateUIForState('running'); // Troca os botões de controle principais
-        
-        // 2. Altera o ícone de todos os arquivos pausados para "processando"
+        updateUIForState('running');
         inProgressList.querySelectorAll('i.fa-pause-circle').forEach(icon => {
             const statusSpan = icon.parentElement;
             statusSpan.innerHTML = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
         });
-
-        // 3. Envia a requisição para o backend confirmar a ação
         fetch('/resume-processing', { method: 'POST' });
     });
-    
+
     // --- Lógica do Modal de Configurações ---
     settingsBtn.addEventListener('click', () => settingsModal.classList.remove('hidden'));
     closeSettingsModalBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+
     saveSettingsBtn.addEventListener('click', () => {
         const settings = {
             max_concurrent_tasks: parseInt(maxConcurrentInput.value, 10)
@@ -514,14 +649,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         settingsModal.classList.add('hidden');
     });
 
-    // --- Lógica de Drag and Drop (Atualizada) ---
+    // --- Lógica de Drag and Drop ---
     dropZone.addEventListener('drop', async (e) => {
         e.preventDefault();
         e.stopPropagation();
         dropZoneOverlay.classList.add('hidden');
         if (progressInterval) return;
         
-        // Simula o comportamento chamando a nossa API
         const folderPath = await api.open_folder_dialog('Selecione a pasta que você arrastou');
         if (folderPath) {
              const files = await api.scan_folder_recursively(folderPath);
@@ -533,6 +667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateFileTree();
         }
     });
+
     dropZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); dropZoneOverlay.classList.remove('hidden'); });
     dropZone.addEventListener('dragleave', (e) => { e.preventDefault(); e.stopPropagation(); dropZoneOverlay.classList.add('hidden'); });
 
@@ -540,6 +675,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     fetch('/get-settings').then(res => res.json()).then(data => {
         maxConcurrentInput.value = data.max_concurrent_tasks || 1;
     });
+
     updateFileTree();
     updateUIForState('idle');
 });
