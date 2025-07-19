@@ -171,6 +171,7 @@ class TranscriptionManager:
             
             while not self.stop_requested.is_set():
                 self.pause_event.wait()
+                self._wait_file_pause(file_path_str) # Checa pausa individual
                 data = wf.readframes(4000)
                 if len(data) == 0: break
                 
@@ -185,11 +186,14 @@ class TranscriptionManager:
 
     def _transcribe_with_whisper(self, temp_wav_file, file_path_str, start_time):
         self.pause_event.wait()
+        self._wait_file_pause(file_path_str) # Checa pausa individual
         if self.stop_requested.is_set(): return None
         if self.model is None:
             raise Exception("Modelo Whisper não carregado corretamente.")
-        # Simulação de progresso para Whisper
         self._update_file_progress(file_path_str, 50, start_time)
+        self.pause_event.wait()
+        self._wait_file_pause(file_path_str)
+        if self.stop_requested.is_set(): return None
         result = self.model.transcribe(str(temp_wav_file), language='pt', fp16=torch.cuda.is_available())
         self._update_file_progress(file_path_str, 100, start_time)
         return result['text'].strip()
@@ -204,6 +208,9 @@ class TranscriptionManager:
         file_path = Path(file_path_str)
         start_time = time.time()
         
+        if file_path_str not in self.pause_events:
+            self.pause_events[file_path_str] = threading.Event()
+            self.pause_events[file_path_str].set()
         with self.files_in_progress_lock:
             self.files_in_progress[file_path_str] = {
                 "filename": file_path.name, "progress": 0, "status": "running",
@@ -211,7 +218,7 @@ class TranscriptionManager:
             }
 
         self.pause_event.wait()
-        if file_path_str in self.pause_events: self.pause_events[file_path_str].wait()
+        self._wait_file_pause(file_path_str)
         if self.stop_requested.is_set(): return None
 
         # ATUALIZADO: Lógica de criação do caminho de saída para múltiplas origens
@@ -236,7 +243,7 @@ class TranscriptionManager:
                 raise Exception("Falha na conversão")
 
             self.pause_event.wait()
-            if file_path_str in self.pause_events: self.pause_events[file_path_str].wait()
+            self._wait_file_pause(file_path_str)
             if self.stop_requested.is_set(): return None
 
             transcript_text = None

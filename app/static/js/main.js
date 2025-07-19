@@ -167,6 +167,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const groupContainer = document.createElement('div');
             groupContainer.className = 'mb-4';
+            groupContainer.dataset.sourcePath = source; // Adiciona o atributo para identificar a pasta
 
             const header = document.createElement('h3');
             header.className = 'text-sm font-semibold text-gray-600 p-1 border-b mb-1';
@@ -210,7 +211,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     function selectItemInAllPanels(filepath) {
         clearAllSelections();
-        document.querySelectorAll(`[data-filepath="${filepath}"]`).forEach(el => el.classList.add('selected-item'));
+        document.querySelectorAll(`[data-filepath="${filepath}"]`).forEach(el => {
+            el.classList.add('selected-item');
+            // **MODIFICADO**: Scroll automático para o item selecionado.
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
     }
     fileTreeContainer.addEventListener('click', e => {
         const li = e.target.closest('li[data-filepath]');

@@ -52,14 +52,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 if (isProcessingIdle) { // Se o processo principal está parado/ocioso
                     menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
-                    menuContent += `<a href="#" data-action="move-top" class="flex items-center gap-3 px-4 py-2 text-gray-800 hover:bg-gray-100"><i class="fas fa-angle-double-up w-4"></i>Mover para o topo</a>`;
+                    // **MODIFICADO**: Ação "Mover para o topo" foi removida.
                     menuContent += `<a href="#" data-action="remove" class="flex items-center gap-3 px-4 py-2 text-red-600 hover:bg-red-100"><i class="fas fa-trash-alt w-4"></i>Remover da Fila</a>`;
                 } else { // Se o processo principal está rodando ou pausado
                     menuContent += `<div class="my-1 border-t border-gray-100"></div>`;
                     menuContent += `<a href="#" data-action="prioritize" class="flex items-center gap-3 px-4 py-2 text-blue-700 hover:bg-blue-100 font-semibold"><i class="fas fa-star w-4"></i>Processar este agora</a>`;
-
                     const isPaused = currentTargetItem.querySelector('.fa-pause-circle') || (isQueueItem && currentTargetItem.querySelector('.queue-status-icon .fa-pause-circle'));
-
                     if (isPaused) {
                          menuContent += `<a href="#" data-action="resume-item" class="flex items-center gap-3 px-4 py-2 text-green-600 hover:bg-green-100"><i class="fas fa-play w-4"></i>Retomar este arquivo</a>`;
                     } else {
@@ -95,8 +93,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     api.open_folder_in_explorer(filePath);
                     break;
                 case 'remove':
-                case 'move-top':
-                    // Dispara um evento para main.js tratar a manipulação da fila
+                // **MODIFICADO**: case 'move-top' removido.
                     document.dispatchEvent(new CustomEvent('queue:action', { 
                         detail: { action, filePath } 
                     }));

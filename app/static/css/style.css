@@ -140,3 +140,17 @@ html.dark .selected-item {
     background-color: #374151 !important; /* dark gray */
     border: 1px solid #4b5563;
 }
+
+/* **MODIFICADO**: Estilos para o status da pasta */
+.folder-processing > summary {
+    background-color: #e0f2fe; /* light blue-100 */
+}
+.folder-completed > summary {
+    background-color: #dcfce7; /* light green-100 */
+}
+html.dark .folder-processing > summary {
+    background-color: #374151; /* dark gray-800 */
+}
+html.dark .folder-completed > summary {
+    background-color: #166534; /* dark green-800 */
+}
