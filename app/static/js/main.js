@@ -60,6 +60,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Formato: { path: "C:/...", source: "C:/Origem1" } ou { path: "D:/...", source: null }
     let fileQueue = []; 
 
+    let allCompletedOrSkippedPaths = new Set(); // <-- ADICIONAR ESTA LINHA
+
     // --- Funções da Árvore de Diretórios ---
     function buildFileTree(filePaths, basePath) {
         const tree = {};
@@ -314,7 +316,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // --- Atualização do updateProgress para feedback visual dinâmico ---
+    // SUBSTITUIR a função updateProgress por esta versão melhorada:
     function updateProgress() {
         fetch('/get-progress')
             .then(response => response.json())
@@ -322,73 +324,86 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateUIForState(data.status);
                 progressBarGeneral.style.width = `${data.progress_general}%`;
                 progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
-                
-                // NOVO: Lógica para exibir toda a fila em "Em progresso"
-                if (data.status === 'running' || data.status === 'paused') {
-                    if (inProgressList.innerHTML === '') { // Renderiza a lista apenas uma vez no início
-                        fileQueue.forEach(file => {
-                            const li = document.createElement('li');
-                            li.className = 'flex flex-col px-4 py-3 border-b border-gray-100';
-                            li.dataset.filepath = file.path;
-                            li.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <span class="status-icon"><i class="fas fa-clock text-gray-400"></i></span>
-                                    <p class="flex-1 font-medium truncate" title="${file.path}">${file.path.split(/[\\/]/).pop()}</p>
-                                    <span class="progress-percent ml-2 text-xs text-gray-500">0%</span>
-                                </div>
-                                <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden">
-                                    <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: 0%;"></div>
-                                </div>
-                            `;
-                            inProgressList.appendChild(li);
-                        });
-                    }
 
-                    // Atualiza os itens individuais
-                    Object.entries(data.files_in_progress).forEach(([path, info]) => {
-                        const li = inProgressList.querySelector(`li[data-filepath="${path}"]`);
-                        if (li) {
-                            const iconSpan = li.querySelector('.status-icon');
-                            const percentSpan = li.querySelector('.progress-percent');
-                            const progressBar = li.querySelector('.progress-bar');
-
-                            let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
-                            if (info.status === 'paused') {
-                                statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
-                            }
-                            iconSpan.innerHTML = statusIcon;
-                            percentSpan.textContent = `${Math.round(info.progress || 0)}%`;
-                            progressBar.style.width = `${info.progress || 0}%`;
-                        }
-                    });
-                    // Atualiza spinners nas pastas
-                    updateFolderSpinners(data.files_in_progress);
-                }
-
-
+                // Adiciona arquivos recém-concluídos ao nosso conjunto de estado persistente
                 data.completed_files.forEach(fileInfo => {
-                    const sourcePath = fileInfo.source_path.replace(/\\/g, '/');
-                    const treeNode = fileTreeContainer.querySelector(`li[data-filepath="${sourcePath}"]`);
-                    if (treeNode) treeNode.innerHTML += ' <i class="fas fa-check-circle text-green-600 ml-1"></i>';
-                    
-                    // Remove da lista "Em Progresso"
-                    const inProgressNode = inProgressList.querySelector(`li[data-filepath="${sourcePath}"]`);
-                    if (inProgressNode) inProgressNode.remove();
-
-                    const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
-                    const li = document.createElement('li');
-                    li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100';
-                    li.dataset.filepath = fileInfo.output_path;
-                    li.innerHTML = `
-                        <i class="fas fa-check-circle text-green-600"></i>
-                        <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
-                        <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
-                            <i class="fas fa-ellipsis-v text-gray-500"></i>
-                        </div>
-                    `;
-                    completedList.prepend(li);
+                    allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
                 });
 
+                // --- GERENCIAMENTO DINÂMICO DA LISTA "EM PROGRESSO" ---
+                const inProgressPaths = new Set(Object.keys(data.files_in_progress));
+                const uiInProgressItems = new Map();
+                inProgressList.querySelectorAll('li[data-filepath]').forEach(li => {
+                    uiInProgressItems.set(li.dataset.filepath, li);
+                });
+
+                // Remove da UI os arquivos que não estão mais em progresso
+                for (const [path, li] of uiInProgressItems.entries()) {
+                    if (!inProgressPaths.has(path)) {
+                        li.remove();
+                    }
+                }
+
+                // Adiciona ou atualiza na UI os arquivos que estão em progresso
+                for (const path of inProgressPaths) {
+                    const info = data.files_in_progress[path];
+                    let li = uiInProgressItems.get(path);
+
+                    if (!li) { // Se o item é novo, cria o elemento
+                        li = document.createElement('li');
+                        li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 dark:border-gray-700';
+                        li.dataset.filepath = path;
+                        inProgressList.appendChild(li);
+                    }
+
+                    // Atualiza o conteúdo do item com o status mais recente
+                    let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                    if (info.status === 'paused') {
+                        statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                    }
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="status-icon">${statusIcon}</span>
+                            <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                            <span class="progress-percent ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
+                        </div>
+                        <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                            <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
+                        </div>
+                    `;
+                }
+
+                // --- GERENCIAMENTO DA LISTA "CONCLUÍDOS" ---
+                data.completed_files.forEach(fileInfo => {
+                    if (!completedList.querySelector(`li[data-filepath="${fileInfo.output_path}"]`)) {
+                        const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                        const li = document.createElement('li');
+                        li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                        li.dataset.filepath = fileInfo.output_path;
+                        li.innerHTML = `
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                            <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                                <i class="fas fa-ellipsis-v text-gray-500"></i>
+                            </div>`;
+                        completedList.prepend(li);
+                    }
+                });
+
+                // --- ATUALIZAÇÃO DOS SELOS DE VERIFICAÇÃO NA FILA DE PROCESSAMENTO ---
+                // Remove selos antigos para evitar duplicatas
+                fileTreeContainer.querySelectorAll('.fa-check-circle').forEach(el => el.remove());
+                // Adiciona selo de verificação para todos os arquivos concluídos/ignorados
+                allCompletedOrSkippedPaths.forEach(path => {
+                    fileTreeContainer.querySelectorAll(`li[data-filepath="${path}"]`).forEach(el => {
+                        if (!el.querySelector('.fa-check-circle')) {
+                            el.insertAdjacentHTML('beforeend', ' <i class="fas fa-check-circle text-green-600 ml-1"></i>');
+                        }
+                        el.classList.add('status-completed');
+                    });
+                });
+
+                // ... resto da função updateProgress (status, finalização, etc)
                 if (data.status === 'completed' || data.status === 'stopped') {
                     clearInterval(progressInterval);
                     progressInterval = null;
@@ -399,7 +414,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                         progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
                     }
                 }
-                // **MODIFICADO**: Chama a nova função de status visual
                 updateStatusStyles(data.files_in_progress, data.completed_files);
             });
     }
@@ -459,6 +473,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const continuityModalMessage = document.getElementById('continuity-modal-message');
 
     startBtn.addEventListener('click', async () => {
+        allCompletedOrSkippedPaths.clear(); // Limpa o estado ao iniciar
         if (fileQueue.length === 0 || !destinoInput.value) {
             alert('Adicione arquivos/pastas à fila e selecione uma pasta de destino.');
             return;
@@ -513,6 +528,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                      fileTreeContainer.querySelectorAll(`li[data-filepath="${fileInfo.source_path}"]`).forEach(el => {
                         el.classList.add('status-completed');
                      });
+                     allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
                 });
             } else if (userChoice === 'each') {
                 // Perguntar para cada arquivo
@@ -553,6 +569,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         fileTreeContainer.querySelectorAll(`li[data-filepath="${fileInfo.source_path}"]`).forEach(el => {
                             el.classList.add('status-completed');
                         });
+                        allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
                     }
                 }
                 filesToProcess = fileQueue.filter(f => !filesToIgnore.includes(f.path));

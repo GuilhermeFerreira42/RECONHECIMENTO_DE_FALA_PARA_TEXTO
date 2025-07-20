@@ -159,12 +159,22 @@ html.dark .status-paused {
     background-color: #78350f; /* Tailwind: amber-900 */
 }
 
-/* Status: Concluído (Verde claro) */
+/* Status: Concluído (Verde claro) - Aplicado principalmente na lista final */
 .status-completed {
     background-color: #dcfce7; /* Tailwind: green-100 */
 }
 html.dark .status-completed {
     background-color: #166534; /* Tailwind: green-800 */
+}
+
+/* Remove o fundo verde de itens concluídos na fila (bloco 1) */
+#file-tree-container .file-item.status-completed,
+#file-tree-container .folder-status-completed > summary {
+    background-color: transparent !important;
+}
+html.dark #file-tree-container .file-item.status-completed,
+html.dark #file-tree-container .folder-status-completed > summary {
+    background-color: transparent !important;
 }
 
 /* Aplica os estilos de status às pastas na árvore de arquivos */

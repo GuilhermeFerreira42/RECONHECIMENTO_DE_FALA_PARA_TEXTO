@@ -1,0 +1,332 @@
+Excelente! Com base na nossa análise e na decisão de usar apenas o selo de verificação para arquivos concluídos, preparei o 5W2H1S detalhado para a equipe de desenvolvimento.
+
+---
+
+### **Plano de Melhoria: Refinamento do Feedback Visual e Gerenciamento da Fila**
+
+**1. What (O Quê):**
+*   **Remover arquivos concluídos da lista "Em Progresso" (segundo bloco).**
+*   **Garantir que arquivos concluídos (processados ou ignorados) exibam permanentemente o selo de verificação (checkmark) na "Fila de Processamento" (primeiro bloco).**
+*   **Remover o comportamento de fundo verde transitório para arquivos concluídos na "Fila de Processamento" (primeiro bloco), mantendo apenas o selo de verificação.**
+
+**2. Why (Por Quê):**
+*   **Melhorar a clareza e precisão da interface do usuário:** Evitar que arquivos já finalizados apareçam como "em andamento", reduzindo confusão.
+*   **Fornecer feedback visual consistente e duradouro:** O selo de verificação deve ser o indicador definitivo de conclusão, visível em todos os momentos.
+*   **Reduzir a poluição visual:** Eliminar o fundo verde transitório para arquivos concluídos, focando na informação essencial (o selo).
+*   **Aprimorar a experiência do usuário (UX):** Tornar o sistema mais intuitivo e fácil de entender o status de cada arquivo.
+
+**3. When (Quando):**
+*   **Prioridade:** Alta. Esta melhoria impacta diretamente a usabilidade e a percepção de funcionalidade do sistema.
+*   **Prazo:** A ser definido pela equipe de desenvolvimento, mas deve ser implementado o mais breve possível.
+
+**4. Where (Onde):**
+*   **Principalmente:** `app/static/js/main.js` (lógica de atualização da UI e gerenciamento das listas).
+*   **Possivelmente:** `app/static/css/style.css` (para garantir que o fundo verde não seja aplicado a arquivos concluídos).
+
+**5. Who (Quem):**
+*   **Responsável:** Equipe de Desenvolvimento Front-end (JavaScript, CSS).
+*   **Colaboração:** Necessária a compreensão da lógica de `TranscriptionManager` no back-end (`app/transcriber.py`) para entender o estado dos arquivos.
+
+**6. How (Como):**
+
+*   **Ação 1: Remover arquivos concluídos da lista "Em Progresso" (`inProgressList`)**
+    *   Na função `updateProgress` em `main.js`:
+        *   Modificar a lógica de preenchimento da `inProgressList`. Em vez de apenas adicionar, a lista deve ser limpa e repopulada a cada ciclo de atualização, contendo *apenas* os arquivos que estão em `data.files_in_progress`.
+        *   Alternativamente, iterar sobre os elementos existentes na `inProgressList` e remover aqueles cujo `data-filepath` não esteja presente em `data.files_in_progress`.
+        *   **Exemplo de pseudocódigo para repopulação:**
+            ```javascript
+            // Dentro de updateProgress, antes de iterar sobre data.files_in_progress
+            inProgressList.innerHTML = ''; // Limpa a lista
+            // ... então, para cada arquivo em data.files_in_progress, adicione-o
+            // ... e para cada arquivo em data.completed_files (incluindo skippedFilesPaths), remova-o se estiver na inProgressList
+            ```
+
+*   **Ação 2: Garantir selo de verificação permanente na "Fila de Processamento" (`fileTreeContainer`)**
+    *   Na função `updateStatusStyles` em `main.js`:
+        *   Ao limpar os estilos, também remover quaisquer selos de verificação existentes para evitar duplicatas.
+        *   Após aplicar os estilos de "em progresso" e "pausado", iterar sobre a lista de arquivos *concluídos*. Esta lista deve ser uma combinação de `data.completed_files` (arquivos recém-processados) e `window.skippedFilesPaths` (arquivos ignorados por já existirem).
+        *   Para cada arquivo nesta lista combinada, localizar o elemento correspondente na `fileTreeContainer` (usando `data-filepath`) e:
+            *   Aplicar a classe `status-completed` (se desejado, mas o foco é o selo).
+            *   Adicionar o elemento `<i>` do selo de verificação (`<i class="fas fa-check-circle text-green-600 ml-1"></i>`) se ele ainda não estiver presente.
+
+*   **Ação 3: Remover fundo verde transitório para arquivos concluídos**
+    *   Na função `updateStatusStyles` em `main.js`:
+        *   Revisar as regras CSS aplicadas pela classe `status-completed`. Se houver um `background-color` definido para `status-completed`, ele deve ser removido ou alterado para `transparent` para os elementos na `fileTreeContainer`.
+        *   A classe `status-completed` pode ser mantida para fins de identificação lógica, mas seu estilo visual de fundo deve ser neutro.
+    *   **Onde:** `app/static/css/style.css`
+        *   Verificar e ajustar as definições de `background-color` para `.status-completed` e `html.dark .status-completed` para que não apliquem um fundo verde aos itens da fila de processamento. O fundo verde pode ser mantido para a lista de "Concluídos" se for o design desejado para aquele bloco.
+
+**7. Success Metrics (Métricas de Sucesso):**
+*   **Zero arquivos concluídos na lista "Em Progresso":** Após o início do processamento (e após a resolução de conflitos), a lista "Em Progresso" deve conter apenas arquivos que estão ativamente sendo processados ou pausados.
+*   **Selo de verificação visível e persistente:** Todos os arquivos que foram processados ou ignorados devem exibir o selo de verificação na "Fila de Processamento" e mantê-lo visível em todas as atualizações da UI.
+*   **Ausência de fundo verde em arquivos concluídos na "Fila de Processamento":** O fundo dos itens concluídos na "Fila de Processamento" deve ser neutro, sem o destaque verde.
+
+---
+
+me ajude com o cod
+
+---
+
+Com certeza! Baseado no seu plano 5W2H1S, preparei as modificações necessárias no código para refinar o feedback visual e o gerenciamento da fila. As alterações se concentram em app/static/js/main.js para a lógica da interface e em app/static/css/style.css para os ajustes visuais.
+
+1. Modificações em app/static/css/style.css
+Para remover o fundo verde dos itens concluídos na fila de processamento (primeiro bloco), mantendo-o apenas na lista final de "Concluídos", adicionamos regras mais específicas que anulam a cor de fundo indesejada.
+
+Ação: Substitua as regras de estilo para itens e pastas concluídas pelas seguintes:
+
+CSS
+
+/* --- ESTILOS DE STATUS (AJUSTADOS) --- */
+
+/* Status: Em Processamento (Azul claro) */
+.status-processing {
+    background-color: #e0f2fe; [cite_start]/* Tailwind: sky-100 */ [cite: 76]
+}
+html.dark .status-processing {
+    background-color: #0c4a6e; [cite_start]/* Tailwind: sky-900 */ [cite: 77]
+}
+
+/* Status: Pausado (Amarelo/Laranja claro) */
+.status-paused {
+    background-color: #fef9c3; [cite_start]/* Tailwind: yellow-100 */ [cite: 78]
+}
+html.dark .status-paused {
+    background-color: #78350f; [cite_start]/* Tailwind: amber-900 */ [cite: 79]
+}
+
+/* Status: Concluído (Verde claro) - Aplicado principalmente na lista final */
+.status-completed {
+    background-color: #dcfce7; [cite_start]/* Tailwind: green-100 */ [cite: 80]
+}
+html.dark .status-completed {
+    background-color: #166534; [cite_start]/* Tailwind: green-800 */ [cite: 81]
+}
+
+/* MODIFICAÇÃO: Remove o fundo verde de itens concluídos na fila (bloco 1) */
+#file-tree-container .file-item.status-completed,
+#file-tree-container .folder-status-completed > summary {
+    background-color: transparent !important;
+}
+
+html.dark #file-tree-container .file-item.status-completed,
+html.dark #file-tree-container .folder-status-completed > summary {
+    background-color: transparent !important;
+}
+
+
+/* Aplica os estilos de status às pastas na árvore de arquivos */
+.folder-status-processing > summary {
+    background-color: #e0f2fe; [cite_start]/* Tailwind: sky-100 */ [cite: 82]
+}
+
+html.dark .folder-status-processing > summary {
+    background-color: #0c4a6e; [cite_start]/* Tailwind: sky-900 */ [cite: 84]
+}
+
+2. Modificações em app/static/js/main.js
+Aqui, ajustamos a lógica para gerenciar as listas de forma mais precisa e para que o selo de verificação (checkmark) seja um indicador permanente do status "concluído".
+
+Ação: Faça as seguintes alterações no arquivo main.js:
+
+2.1. Adicione uma variável para estado persistente:
+
+No início do evento DOMContentLoaded, declare uma nova variável para armazenar todos os arquivos que foram concluídos ou ignorados durante a sessão.
+
+JavaScript
+
+document.addEventListener('DOMContentLoaded', async () => {
+    // ... (elementos da UI)
+    let progressInterval = null;
+    let fileQueue = [];
+    let allCompletedOrSkippedPaths = new Set(); // <-- ADICIONAR ESTA LINHA
+2.2. Limpe o estado ao iniciar e popule ao ignorar arquivos:
+
+Modifique o listener de evento do startBtn para limpar o novo conjunto (Set) a cada início de processo e para popular o conjunto quando o usuário decidir ignorar arquivos já existentes.
+
+JavaScript
+
+    startBtn.addEventListener('click', async () => {
+        if (fileQueue.length === 0 || !destinoInput.value) {
+            alert('Adicione arquivos/pastas à fila e selecione uma pasta de destino.');
+            return;
+        }
+
+        allCompletedOrSkippedPaths.clear(); // <-- ADICIONAR ESTA LINHA para limpar o estado
+        
+        [cite_start]// ... (resto da lógica do botão, como em [cite: 184])
+
+        // Se houver conflitos, seu código aguarda a decisão do usuário.
+        // Modifique as seções que lidam com "skip" e "each"
+
+            // ...
+            if (userChoice === 'skip') {
+                const existingSourcePaths = existingFiles.map(f => f.source_path);
+                filesToProcess = fileQueue.filter(f => !existingSourcePaths.includes(f.path));
+                existingSourcePaths.forEach(p => allCompletedOrSkippedPaths.add(p)); // <-- ADICIONAR ESTA LINHA
+                // ...
+            } else if (userChoice === 'each') {
+                let filesToIgnore = [];
+                // ... (loop para perguntar para cada arquivo)
+                filesToProcess = fileQueue.filter(f => !filesToIgnore.includes(f.path));
+                filesToIgnore.forEach(p => allCompletedOrSkippedPaths.add(p)); // <-- ADICIONAR ESTA LINHA
+            }
+        // ... (resto da lógica)
+    });
+2.3. Substitua a função updateProgress:
+
+Esta é a principal mudança. A nova função gerencia a lista "Em Progresso" de forma dinâmica, reflete o estado real do back-end e passa os dados corretos para a função que atualiza os estilos visuais.
+
+JavaScript
+
+    // SUBSTITUA a função updateProgress inteira por esta versão melhorada
+    function updateProgress() {
+        fetch('/get-progress')
+            .then(response => response.json())
+            .then(data => {
+                updateUIForState(data.status);
+                progressBarGeneral.style.width = `${data.progress_general}%`;
+                progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+
+                // Adiciona arquivos recém-concluídos ao nosso conjunto de estado persistente
+                data.completed_files.forEach(fileInfo => {
+                    allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
+                });
+
+                // --- GERENCIAMENTO DINÂMICO DA LISTA "EM PROGRESSO" ---
+                const inProgressPaths = new Set(Object.keys(data.files_in_progress));
+                const uiInProgressItems = new Map();
+                inProgressList.querySelectorAll('li[data-filepath]').forEach(li => {
+                    uiInProgressItems.set(li.dataset.filepath, li);
+                });
+
+                // Remove da UI os arquivos que não estão mais em progresso
+                for (const [path, li] of uiInProgressItems.entries()) {
+                    if (!inProgressPaths.has(path)) {
+                        li.remove();
+                    }
+                }
+
+                // Adiciona ou atualiza na UI os arquivos que estão em progresso
+                for (const path of inProgressPaths) {
+                    const info = data.files_in_progress[path];
+                    let li = uiInProgressItems.get(path);
+
+                    if (!li) { // Se o item é novo, cria o elemento
+                        li = document.createElement('li');
+                        li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 dark:border-gray-700';
+                        li.dataset.filepath = path;
+                        inProgressList.appendChild(li);
+                    }
+
+                    // Atualiza o conteúdo do item com o status mais recente
+                    let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                    if (info.status === 'paused') {
+                        statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                    }
+                    li.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="status-icon">${statusIcon}</span>
+                            <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                            <span class="progress-percent ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
+                        </div>
+                        <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                            <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
+                        </div>
+                    `;
+                }
+                
+                // --- GERENCIAMENTO DA LISTA "CONCLUÍDOS" ---
+                data.completed_files.forEach(fileInfo => {
+                    // Evita adicionar duplicatas à lista de concluídos
+                    if (!completedList.querySelector(`li[data-filepath="${fileInfo.output_path}"]`)) {
+                        const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                        const li = document.createElement('li');
+                        li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                        li.dataset.filepath = fileInfo.output_path;
+                        li.innerHTML = `
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                            <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                                <i class="fas fa-ellipsis-v text-gray-500"></i>
+                            </div>
+                        `;
+                        completedList.prepend(li);
+                    }
+                });
+
+                if (data.status === 'completed' || data.status === 'stopped') {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                    if (data.status === 'completed') {
+                        progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                        inProgressList.innerHTML = '<p class="text-center text-gray-400 p-4">Fila concluída.</p>';
+                    } else {
+                        progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
+                    }
+                }
+                
+                // Chama a função de atualização de estilos visuais com o estado completo
+                updateStatusStyles(data.files_in_progress, allCompletedOrSkippedPaths);
+            });
+    }
+2.4. Substitua a função updateStatusStyles:
+
+Finalmente, substitua a função updateStatusStyles para que ela use o conjunto de arquivos concluídos, aplique a classe status-completed e adicione o selo de verificação de forma permanente e sem duplicatas.
+
+JavaScript
+
+    // SUBSTITUA a função updateStatusStyles inteira por esta versão
+    function updateStatusStyles(filesInProgress, completedOrSkippedPaths) {
+        // Limpa todos os status antigos e ícones para evitar duplicatas
+        fileTreeContainer.querySelectorAll('.status-processing, .status-paused, .status-completed').forEach(el => {
+            el.classList.remove('status-processing', 'status-paused', 'status-completed');
+        });
+        fileTreeContainer.querySelectorAll('.folder-status-processing, .folder-status-completed').forEach(el => {
+            el.classList.remove('folder-status-processing', 'folder-status-completed');
+        });
+        fileTreeContainer.querySelectorAll('.fa-check-circle').forEach(icon => icon.remove());
+
+        // Aplica status de processando e pausado nos arquivos
+        Object.entries(filesInProgress).forEach(([path, info]) => {
+            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${path}"]`);
+            fileEls.forEach(el => {
+                const statusClass = info.status === 'paused' ? 'status-paused' : 'status-processing';
+                el.classList.add(statusClass);
+            });
+        });
+
+        // Aplica status de concluído (classe e selo de verificação)
+        completedOrSkippedPaths.forEach(path => {
+            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${path}"]`);
+            fileEls.forEach(el => {
+                el.classList.add('status-completed');
+                if (!el.querySelector('.fa-check-circle')) {
+                    const checkmark = document.createElement('i');
+                    checkmark.className = 'fas fa-check-circle text-green-600 ml-1';
+                    el.appendChild(checkmark);
+                }
+            });
+        });
+
+        // Aplica status em pastas (agora usando a lista completa de concluídos)
+        fileTreeContainer.querySelectorAll('div[data-source-path]').forEach(groupContainer => {
+            const sourcePath = groupContainer.dataset.sourcePath;
+            if (sourcePath === 'avulsos') return;
+            
+            const filesInGroup = fileQueue.filter(f => f.source === sourcePath).map(f => f.path);
+            if (filesInGroup.length === 0) return;
+
+            const inProgressPaths = Object.keys(filesInProgress);
+            const completedPaths = Array.from(completedOrSkippedPaths);
+
+            const isAnyInProgress = filesInGroup.some(fp => inProgressPaths.includes(fp));
+            const areAllCompleted = filesInGroup.every(fp => completedPaths.includes(fp));
+
+            if (areAllCompleted) {
+                groupContainer.classList.add('folder-status-completed');
+            } else if (isAnyInProgress) {
+                groupContainer.classList.add('folder-status-processing');
+            }
+        });
+    }
+Com estas alterações, sua aplicação agora se comportará exatamente como descrito no plano, proporcionando uma experiência de usuário muito mais clara, precisa e intuitiva.
