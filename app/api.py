@@ -115,3 +115,50 @@ class Api:
                 subprocess.run(['xdg-open', path], check=True)
         except Exception as e:
             print(f"[ERRO API] Falha ao tentar abrir o arquivo nativamente: {e}") 
+
+    def _calculate_output_path(self, file_info, dest_path_str, keep_structure):
+        """
+        Calcula o caminho de saída para um arquivo de transcrição.
+        Esta função centraliza a lógica de nomenclatura, igual ao backend.
+        """
+        from pathlib import Path
+        dest_path = Path(dest_path_str)
+        file_path = Path(file_info['path'])
+        source_path_str = file_info.get('source')
+
+        # Caso 1: Arquivos avulsos (sem pasta de origem) são salvos na raiz do destino.
+        if not source_path_str:
+            return dest_path / file_path.with_suffix('.txt').name
+
+        # Caso 2: Arquivos de uma pasta de origem.
+        source_path = Path(source_path_str)
+        # Cria uma subpasta no destino com o nome da pasta de origem.
+        output_root_folder = dest_path / source_path.name
+        if keep_structure:
+            try:
+                relative_part = file_path.relative_to(source_path)
+                return output_root_folder / relative_part.with_suffix('.txt')
+            except ValueError:
+                return output_root_folder / file_path.with_suffix('.txt').name
+        else:
+            return output_root_folder / file_path.with_suffix('.txt').name
+
+    def check_existing_files(self, file_list, dest_path, keep_structure):
+        """
+        Verifica quais arquivos na fila já têm uma transcrição no destino.
+        Retorna a lista de arquivos que já existem.
+        """
+        print("[API] Verificando arquivos existentes...")
+        if not dest_path or not os.path.isdir(dest_path):
+            return {'existing_files': []}
+
+        conflicts = []
+        for file_info in file_list:
+            expected_output_path = self._calculate_output_path(file_info, dest_path, keep_structure)
+            if os.path.exists(expected_output_path):
+                conflicts.append({
+                    "source_path": file_info['path'],
+                    "output_path": str(expected_output_path).replace('\\', '/')
+                })
+        print(f"[API] Encontrados {len(conflicts)} arquivos já processados.")
+        return {'existing_files': conflicts} 

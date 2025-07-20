@@ -450,17 +450,140 @@ document.addEventListener('DOMContentLoaded', async () => {
         completedList.innerHTML = '';
     });
 
-    startBtn.addEventListener('click', () => {
+    // --- NOVO: Elementos do Modal de Continuidade ---
+    const continuityModal = document.getElementById('continuity-modal');
+    const modalSkipBtn = document.getElementById('modal-skip-btn');
+    const modalReprocessBtn = document.getElementById('modal-reprocess-btn');
+    const modalEachBtn = document.getElementById('modal-each-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+    const continuityModalMessage = document.getElementById('continuity-modal-message');
+
+    startBtn.addEventListener('click', async () => {
         if (fileQueue.length === 0 || !destinoInput.value) {
             alert('Adicione arquivos/pastas à fila e selecione uma pasta de destino.');
             return;
         }
+
+        const destPath = destinoInput.value;
+        const keepStructure = document.getElementById('keep-structure-checkbox').checked;
+
+        // 1. Chama a API para verificar arquivos existentes
+        const conflicts = await api.check_existing_files(fileQueue, destPath, keepStructure);
+        const existingFiles = conflicts.existing_files || [];
         
-        // ATUALIZADO: O corpo da requisição agora envia a fila estruturada.
+        let filesToProcess = [...fileQueue];
+
+        // 2. Se houver conflitos, mostra o modal e aguarda a decisão do usuário
+        if (existingFiles.length > 0) {
+            continuityModalMessage.textContent = `Detectamos que ${existingFiles.length} arquivo(s) na fila já pode(m) ter sido processado(s). Como deseja continuar?`;
+            continuityModal.classList.remove('hidden');
+
+            const userChoice = await new Promise(resolve => {
+                modalSkipBtn.onclick = () => resolve('skip');
+                modalReprocessBtn.onclick = () => resolve('reprocess');
+                modalEachBtn.onclick = () => resolve('each');
+                modalCancelBtn.onclick = () => resolve('cancel');
+            });
+
+            continuityModal.classList.add('hidden');
+
+            if (userChoice === 'cancel') {
+                return; // Interrompe a operação
+            }
+            if (userChoice === 'skip') {
+                const existingSourcePaths = existingFiles.map(f => f.source_path);
+                filesToProcess = fileQueue.filter(f => !existingSourcePaths.includes(f.path));
+                // Atualiza a UI para os arquivos ignorados
+                window.skippedFilesPaths = existingSourcePaths; // Guarda para o updateProgress
+                skippedFilesCount = existingFiles.length;
+                existingFiles.forEach(fileInfo => {
+                    // Adiciona na lista de "Concluídos"
+                     const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                     const li = document.createElement('li');
+                     li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                     li.dataset.filepath = fileInfo.output_path;
+                     li.innerHTML = `
+                         <i class="fas fa-check-circle text-green-600"></i>
+                         <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                         <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                             <i class="fas fa-ellipsis-v text-gray-500"></i>
+                         </div>`;
+                     completedList.prepend(li);
+                     // Marca na árvore da esquerda como concluído
+                     fileTreeContainer.querySelectorAll(`li[data-filepath="${fileInfo.source_path}"]`).forEach(el => {
+                        el.classList.add('status-completed');
+                     });
+                });
+            } else if (userChoice === 'each') {
+                // Perguntar para cada arquivo
+                let filesToIgnore = [];
+                for (const fileInfo of existingFiles) {
+                    // Cria um mini-modal para cada arquivo
+                    const fileName = fileInfo.source_path.split(/[\\/]/).pop();
+                    continuityModalMessage.textContent = `O arquivo "${fileName}" já possui uma transcrição. O que deseja fazer?`;
+                    continuityModal.classList.remove('hidden');
+                    // Só mostra os botões relevantes
+                    modalSkipBtn.style.display = '';
+                    modalReprocessBtn.style.display = '';
+                    modalEachBtn.style.display = 'none';
+                    modalCancelBtn.style.display = '';
+                    const choice = await new Promise(resolve => {
+                        modalSkipBtn.onclick = () => resolve('skip');
+                        modalReprocessBtn.onclick = () => resolve('reprocess');
+                        modalCancelBtn.onclick = () => resolve('cancel');
+                    });
+                    continuityModal.classList.add('hidden');
+                    if (choice === 'cancel') {
+                        return;
+                    }
+                    if (choice === 'skip') {
+                        filesToIgnore.push(fileInfo.source_path);
+                        // Atualiza a UI para o arquivo ignorado
+                        const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                        const li = document.createElement('li');
+                        li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                        li.dataset.filepath = fileInfo.output_path;
+                        li.innerHTML = `
+                            <i class="fas fa-check-circle text-green-600"></i>
+                            <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                            <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                                <i class="fas fa-ellipsis-v text-gray-500"></i>
+                            </div>`;
+                        completedList.prepend(li);
+                        fileTreeContainer.querySelectorAll(`li[data-filepath="${fileInfo.source_path}"]`).forEach(el => {
+                            el.classList.add('status-completed');
+                        });
+                    }
+                }
+                filesToProcess = fileQueue.filter(f => !filesToIgnore.includes(f.path));
+                window.skippedFilesPaths = filesToIgnore;
+                skippedFilesCount = filesToIgnore.length;
+            } else { // Reprocessar tudo
+                window.skippedFilesPaths = [];
+                skippedFilesCount = 0;
+            }
+        } else {
+            window.skippedFilesPaths = [];
+            skippedFilesCount = 0;
+        }
+
+        // 3. Inicia o processamento com a lista de arquivos final
+        if (filesToProcess.length === 0 && skippedFilesCount > 0) {
+             alert("Todos os arquivos na fila já foram processados e foram ignorados.");
+             totalFilesForProgress = fileQueue.length;
+             const progressPercentage = totalFilesForProgress > 0 ? (skippedFilesCount / totalFilesForProgress) * 100 : 0;
+             progressBarGeneral.style.width = `${progressPercentage}%`;
+             progressTextGeneral.textContent = `Processo Finalizado! ${skippedFilesCount}/${totalFilesForProgress} arquivos processados.`;
+             updateUIForState('completed');
+             return;
+        }
+
+        totalFilesForProgress = fileQueue.length;
+
         const requestBody = {
-            file_list: fileQueue, // Envia o array de objetos
-            dest_path: destinoInput.value,
-            keep_structure: document.getElementById('keep-structure-checkbox').checked,
+            file_list: filesToProcess,
+            dest_path: destPath,
+            keep_structure: keepStructure,
             model_name: document.getElementById('model-selector').value
         };
 
@@ -472,8 +595,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         .then(res => res.json())
         .then(data => {
             if (data.status === 'sucesso') {
-                completedList.innerHTML = ''; // Limpa concluídos antigos
-                inProgressList.innerHTML = ''; // Limpa a lista para ser recriada pelo updateProgress
+                // Limpa apenas a lista de progresso, a de concluídos pode ter sido populada
+                inProgressList.innerHTML = '';
                 progressInterval = setInterval(updateProgress, 1000);
             } else {
                 alert(`Erro: ${data.message}`);

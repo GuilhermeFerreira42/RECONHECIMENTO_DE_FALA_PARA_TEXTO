@@ -123,6 +123,40 @@
       </div>
   </div>
 
+  <div id="continuity-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50">
+    <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-lg mx-4">
+        <div class="p-6">
+            <div class="flex items-start gap-4">
+                <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900 sm:mx-0 sm:h-10 sm:w-10">
+                    <i class="fas fa-history text-blue-600 dark:text-blue-300"></i>
+                </div>
+                <div class="mt-0 text-left">
+                    <h3 class="text-lg leading-6 font-bold text-gray-900 dark:text-gray-100" id="continuity-modal-title">Continuar Processamento?</h3>
+                    <div class="mt-2">
+                        <p class="text-sm text-gray-600 dark:text-gray-300" id="continuity-modal-message">
+                            Detectamos que alguns arquivos na fila já foram processados. Como você deseja continuar?
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-gray-50 dark:bg-gray-700/50 px-6 py-4 flex flex-row-reverse gap-3">
+            <button id="modal-skip-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none sm:w-auto sm:text-sm">
+                Continuar (Ignorar)
+            </button>
+            <button id="modal-reprocess-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 sm:w-auto sm:text-sm">
+                Reprocessar Tudo
+            </button>
+            <button id="modal-each-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 sm:w-auto sm:text-sm">
+                Perguntar para Cada
+            </button>
+             <button id="modal-cancel-btn" type="button" class="w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none dark:bg-gray-600 dark:text-gray-200 dark:border-gray-500 dark:hover:bg-gray-500 sm:w-auto sm:text-sm mr-auto">
+                Cancelar
+            </button>
+        </div>
+    </div>
+  </div>
+
   <script src="{{ url_for('static', filename='js/ui.js') }}"></script>
   <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
