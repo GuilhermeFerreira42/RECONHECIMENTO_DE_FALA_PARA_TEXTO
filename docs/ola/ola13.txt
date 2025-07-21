@@ -1,0 +1,140 @@
+O novo comportamento desejado para o sistema é que, quando o cliente adicionar uma pasta ou um arquivo avulso para ser processado, todos os arquivos devem aparecer no bloco número 2, em "Progresso". No entanto, quando o sistema identificar que já existem arquivos processados e o cliente clicar em continuar,  nesse caso, não deve exibir todos os arquivos novamente. Em vez disso, o sistema deve mostrar apenas os arquivos que ainda precisam ser processados, formando assim uma fila com todos os arquivos pendentes. Os arquivos que nao foram processados não devem aparecer no bloco número 2, que é a fila de "Progresso".
+
+
+
+A regra é que de forma geral o sistema deve colocar todos os arquivos na fila de em Progresso para mostrar os arquivos que precisam ser processadas exceto os arquivos que já foram processadas isso pode valer para quando o cliente clicar em continuar ou quando ele escolher cada arquivo avulso
+
+---
+Com base na sua solicitação, modifiquei o comportamento do sistema para que a lista "Em Progresso" (bloco 2) reflita com precisão a fila de arquivos pendentes.
+
+Quando o processamento é iniciado, todos os arquivos que precisam ser processados aparecerão na lista "Em Progresso" com o status "Aguardando...". Se o sistema detectar que alguns arquivos já foram processados e você optar por ignorá-los (usando a opção "Continuar (Ignorar)" do modal), esses arquivos ignorados **não aparecerão** na lista "Em Progresso". A lista mostrará apenas os arquivos que de fato entraram na fila de processamento.
+
+À medida que o back-end começa a trabalhar em cada arquivo, seu status na lista mudará de "Aguardando..." para a barra de progresso ativa.
+
+-----
+
+### Arquivo Modificado
+
+A única alteração necessária foi no arquivo `app/static/js/main.js`, especificamente na função `updateProgress`.
+
+### `app/static/js/main.js`
+
+A lógica de gerenciamento dinâmico da lista "Em Progresso" foi ajustada para considerar não apenas os arquivos que o back-end está processando ativamente, mas também todos os arquivos que estão na fila de espera.
+
+```javascript
+// SUBSTITUA a função updateProgress pela versão corrigida abaixo:
+
+function updateProgress() {
+    fetch('/get-progress')
+        .then(response => response.json())
+        .then(data => {
+            updateUIForState(data.status);
+            progressBarGeneral.style.width = `${data.progress_general}%`;
+            progressTextGeneral.textContent = `Geral: ${Math.round(data.progress_general)}% (${data.files_processed}/${data.total_files}) | Decorrido: ${data.batch_elapsed_str}`;
+
+            // Adiciona arquivos recém-concluídos ao nosso conjunto de estado persistente
+            data.completed_files.forEach(fileInfo => {
+                allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
+            });
+
+            // --- LÓGICA CORRIGIDA PARA GERENCIAMENTO DA LISTA "EM PROGRESSO" ---
+
+            // 1. Define o conjunto de verdade: todos os arquivos da fila, exceto os já concluídos ou ignorados.
+            const pendingAndInProgressPaths = new Set(
+                fileQueue.filter(f => !allCompletedOrSkippedPaths.has(f.path)).map(f => f.path)
+            );
+
+            // 2. Mapeia os itens que já existem na UI para evitar recriação desnecessária.
+            const uiInProgressItems = new Map();
+            inProgressList.querySelectorAll('li[data-filepath]').forEach(li => {
+                uiInProgressItems.set(li.dataset.filepath, li);
+            });
+
+            // 3. Remove da UI os itens que não estão mais na fila (ou seja, foram concluídos no último segundo).
+            for (const [path, li] of uiInProgressItems.entries()) {
+                if (!pendingAndInProgressPaths.has(path)) {
+                    li.remove();
+                }
+            }
+
+            // 4. Adiciona ou atualiza todos os itens que devem estar na lista.
+            pendingAndInProgressPaths.forEach(path => {
+                const info = data.files_in_progress[path]; // Informações do backend, se o arquivo estiver ativo.
+                let li = uiInProgressItems.get(path);
+
+                // Cria o elemento <li> se for a primeira vez que aparece.
+                if (!li) {
+                    li = document.createElement('li');
+                    li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 dark:border-gray-700';
+                    li.dataset.filepath = path;
+                    inProgressList.appendChild(li); // A ordem será mantida pela ordem do `fileQueue`.
+                }
+
+                let innerHTML;
+                
+                // Se o arquivo está ativo no backend (rodando ou pausado).
+                if (info) {
+                    let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                    if (info.status === 'paused') {
+                        statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                    }
+                    innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="status-icon">${statusIcon}</span>
+                            <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                            <span class="progress-percent ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
+                        </div>
+                        <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                            <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
+                        </div>
+                    `;
+                // Se o arquivo ainda está na fila de espera.
+                } else {
+                    const statusIcon = '<i class="fas fa-clock text-gray-400"></i>'; // Ícone de relógio para "Aguardando"
+                    innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="status-icon">${statusIcon}</span>
+                            <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                            <span class="progress-percent ml-2 text-xs text-gray-500">Aguardando...</span>
+                        </div>
+                        <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                            <div class="progress-bar h-1 bg-gray-400 rounded-full" style="width: 0%;"></div>
+                        </div>
+                    `;
+                }
+                li.innerHTML = innerHTML;
+            });
+
+            // --- GERENCIAMENTO DA LISTA "CONCLUÍDOS" (Sem alterações) ---
+            data.completed_files.forEach(fileInfo => {
+                if (!completedList.querySelector(`li[data-filepath="${fileInfo.output_path}"]`)) {
+                    const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
+                    const li = document.createElement('li');
+                    li.className = 'group relative flex items-center gap-3 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                    li.dataset.filepath = fileInfo.output_path;
+                    li.innerHTML = `
+                        <i class="fas fa-check-circle text-green-600"></i>
+                        <p class="flex-1 font-medium truncate" title="${fileInfo.output_path}">${completedFilename}</p>
+                        <div class="three-dots-menu absolute top-0 right-0 h-full flex items-center px-4 opacity-0 group-hover:opacity-100 cursor-pointer">
+                            <i class="fas fa-ellipsis-v text-gray-500"></i>
+                        </div>`;
+                    completedList.prepend(li);
+                }
+            });
+
+            // --- FINALIZAÇÃO E ATUALIZAÇÕES DE ESTILO (Sem alterações) ---
+            if (data.status === 'completed' || data.status === 'stopped') {
+                clearInterval(progressInterval);
+                progressInterval = null;
+                if (data.status === 'completed') {
+                    progressTextGeneral.textContent = `Processo Finalizado! ${data.total_files} arquivos processados.`;
+                    inProgressList.innerHTML = '<p class="text-center text-gray-400 p-4">Fila concluída.</p>';
+                } else {
+                    progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
+                }
+            }
+            updateFolderSpinners(data.files_in_progress);
+            updateStatusStyles(data.files_in_progress, allCompletedOrSkippedPaths);
+        });
+}
+```

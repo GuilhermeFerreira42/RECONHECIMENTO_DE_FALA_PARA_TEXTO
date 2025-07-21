@@ -342,7 +342,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // SUBSTITUIR a função updateProgress por esta versão melhorada:
+    // SUBSTITUIR a função updateProgress pela versão corrigida abaixo:
+
     function updateProgress() {
         fetch('/get-progress')
             .then(response => response.json())
@@ -356,50 +357,75 @@ document.addEventListener('DOMContentLoaded', async () => {
                     allCompletedOrSkippedPaths.add(fileInfo.source_path.replace(/\\/g, '/'));
                 });
 
-                // --- GERENCIAMENTO DINÂMICO DA LISTA "EM PROGRESSO" ---
-                const inProgressPaths = new Set(Object.keys(data.files_in_progress));
+                // --- LÓGICA CORRIGIDA PARA GERENCIAMENTO DA LISTA "EM PROGRESSO" ---
+
+                // 1. Define o conjunto de verdade: todos os arquivos da fila, exceto os já concluídos ou ignorados.
+                const pendingAndInProgressPaths = new Set(
+                    fileQueue.filter(f => !allCompletedOrSkippedPaths.has(f.path)).map(f => f.path)
+                );
+
+                // 2. Mapeia os itens que já existem na UI para evitar recriação desnecessária.
                 const uiInProgressItems = new Map();
                 inProgressList.querySelectorAll('li[data-filepath]').forEach(li => {
                     uiInProgressItems.set(li.dataset.filepath, li);
                 });
 
-                // Remove da UI os arquivos que não estão mais em progresso
+                // 3. Remove da UI os itens que não estão mais na fila (ou seja, foram concluídos no último segundo).
                 for (const [path, li] of uiInProgressItems.entries()) {
-                    if (!inProgressPaths.has(path)) {
+                    if (!pendingAndInProgressPaths.has(path)) {
                         li.remove();
                     }
                 }
 
-                // Adiciona ou atualiza na UI os arquivos que estão em progresso
-                for (const path of inProgressPaths) {
-                    const info = data.files_in_progress[path];
+                // 4. Adiciona ou atualiza todos os itens que devem estar na lista.
+                pendingAndInProgressPaths.forEach(path => {
+                    const info = data.files_in_progress[path]; // Informações do backend, se o arquivo estiver ativo.
                     let li = uiInProgressItems.get(path);
 
-                    if (!li) { // Se o item é novo, cria o elemento
+                    // Cria o elemento <li> se for a primeira vez que aparece.
+                    if (!li) {
                         li = document.createElement('li');
                         li.className = 'flex flex-col px-4 py-3 border-b border-gray-100 dark:border-gray-700';
                         li.dataset.filepath = path;
-                        inProgressList.appendChild(li);
+                        inProgressList.appendChild(li); // A ordem será mantida pela ordem do `fileQueue`.
                     }
 
-                    // Atualiza o conteúdo do item com o status mais recente
-                    let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
-                    if (info.status === 'paused') {
-                        statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                    let innerHTML;
+                    
+                    // Se o arquivo está ativo no backend (rodando ou pausado).
+                    if (info) {
+                        let statusIcon = '<i class="fas fa-cog fa-spin text-blue-500"></i>';
+                        if (info.status === 'paused') {
+                            statusIcon = '<i class="fas fa-pause-circle text-yellow-500"></i>';
+                        }
+                        innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="status-icon">${statusIcon}</span>
+                                <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                                <span class="progress-percent ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
+                            </div>
+                            <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                                <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
+                            </div>
+                        `;
+                    // Se o arquivo ainda está na fila de espera.
+                    } else {
+                        const statusIcon = '<i class="fas fa-clock text-gray-400"></i>'; // Ícone de relógio para "Aguardando"
+                        innerHTML = `
+                            <div class="flex items-center gap-3">
+                                <span class="status-icon">${statusIcon}</span>
+                                <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
+                                <span class="progress-percent ml-2 text-xs text-gray-500">Aguardando...</span>
+                            </div>
+                            <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
+                                <div class="progress-bar h-1 bg-gray-400 rounded-full" style="width: 0%;"></div>
+                            </div>
+                        `;
                     }
-                    li.innerHTML = `
-                        <div class="flex items-center gap-3">
-                            <span class="status-icon">${statusIcon}</span>
-                            <p class="flex-1 font-medium truncate" title="${path}">${path.split(/[\\/]/).pop()}</p>
-                            <span class="progress-percent ml-2 text-xs text-gray-500">${Math.round(info.progress || 0)}%</span>
-                        </div>
-                        <div class="h-1 mt-2 bg-gray-200 rounded-full overflow-hidden dark:bg-gray-700">
-                            <div class="progress-bar h-1 bg-blue-600 rounded-full" style="width: ${info.progress || 0}%;"></div>
-                        </div>
-                    `;
-                }
+                    li.innerHTML = innerHTML;
+                });
 
-                // --- GERENCIAMENTO DA LISTA "CONCLUÍDOS" ---
+                // --- GERENCIAMENTO DA LISTA "CONCLUÍDOS" (Sem alterações) ---
                 data.completed_files.forEach(fileInfo => {
                     if (!completedList.querySelector(`li[data-filepath="${fileInfo.output_path}"]`)) {
                         const completedFilename = fileInfo.output_path.split(/[\\/]/).pop();
@@ -416,20 +442,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     }
                 });
 
-                // --- ATUALIZAÇÃO DOS SELOS DE VERIFICAÇÃO NA FILA DE PROCESSAMENTO ---
-                // Remove selos antigos para evitar duplicatas
-                fileTreeContainer.querySelectorAll('.fa-check-circle').forEach(el => el.remove());
-                // Adiciona selo de verificação para todos os arquivos concluídos/ignorados
-                allCompletedOrSkippedPaths.forEach(path => {
-                    fileTreeContainer.querySelectorAll(`li[data-filepath="${path}"]`).forEach(el => {
-                        if (!el.querySelector('.fa-check-circle')) {
-                            el.insertAdjacentHTML('beforeend', ' <i class="fas fa-check-circle text-green-600 ml-1"></i>');
-                        }
-                        el.classList.add('status-completed');
-                    });
-                });
-
-                // ... resto da função updateProgress (status, finalização, etc)
+                // --- FINALIZAÇÃO E ATUALIZAÇÕES DE ESTILO (Sem alterações) ---
                 if (data.status === 'completed' || data.status === 'stopped') {
                     clearInterval(progressInterval);
                     progressInterval = null;
