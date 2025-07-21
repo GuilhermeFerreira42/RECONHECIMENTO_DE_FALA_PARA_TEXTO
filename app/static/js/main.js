@@ -247,41 +247,52 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // --- Spinner em pastas com arquivos em processamento ---
+    // Função para restaurar o spinner de progresso nas pastas
     function updateFolderSpinners(filesInProgress) {
-        // Remove todos os spinners antigos
-        fileTreeContainer.querySelectorAll('.folder-item summary .fa-cog').forEach(el => el.remove());
-        // Para cada pasta, verifica se contém algum arquivo em progresso
-        fileTreeContainer.querySelectorAll('details.folder-item').forEach(details => {
-            const summary = details.querySelector('summary');
-            const folderPath = summary.textContent.trim();
-            // Caminhos dos arquivos em progresso
-            const files = Object.keys(filesInProgress);
-            let hasActive = false;
-            files.forEach(fp => {
-                if (summary && fp.includes(folderPath)) hasActive = true;
-            });
-            if (hasActive) {
-                const spinner = document.createElement('i');
-                spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
-                summary.appendChild(spinner);
+        // Remove todos os spinners antigos para evitar duplicatas
+        fileTreeContainer.querySelectorAll('summary .fa-spin').forEach(spinner => spinner.remove());
+
+        const inProgressPaths = new Set(Object.keys(filesInProgress));
+        if (inProgressPaths.size === 0) return;
+
+        // Itera sobre cada grupo de pasta na fila de processamento
+        fileTreeContainer.querySelectorAll('div[data-source-path]').forEach(groupContainer => {
+            const sourcePath = groupContainer.dataset.sourcePath;
+            if (sourcePath === 'avulsos') return; // Ignora arquivos avulsos
+
+            // Verifica se algum arquivo nesse grupo está em progresso
+            const hasActiveFile = fileQueue.some(file =>
+                file.source === sourcePath && inProgressPaths.has(file.path)
+            );
+
+            if (hasActiveFile) {
+                const summary = groupContainer.querySelector('h3'); // O header da pasta
+                if (summary && !summary.querySelector('.fa-spin')) {
+                    const spinner = document.createElement('i');
+                    spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
+                    summary.appendChild(spinner);
+                }
             }
         });
     }
 
-    // --- Nova função para aplicar status visual ---
-    function updateStatusStyles(filesInProgress, completedFiles) {
-        // Limpa todos os status antigos
-        fileTreeContainer.querySelectorAll('.status-processing, .status-paused, .status-completed').forEach(el => {
+    // Função para aplicar status visual consistente
+    function updateStatusStyles(filesInProgress, completedOrSkippedPaths) {
+        // Limpa todos os status antigos de todos os elementos relevantes
+        document.querySelectorAll('.status-processing, .status-paused, .status-completed').forEach(el => {
             el.classList.remove('status-processing', 'status-paused', 'status-completed');
         });
+        // Limpa status de pastas
         fileTreeContainer.querySelectorAll('.folder-status-processing, .folder-status-completed').forEach(el => {
             el.classList.remove('folder-status-processing', 'folder-status-completed');
         });
+        // Limpa ícones de concluído para evitar duplicatas
+        fileTreeContainer.querySelectorAll('.fa-check-circle').forEach(icon => icon.remove());
 
-        // Aplica status em arquivos
+        // Aplica status de "processando" e "pausado" em TODOS os painéis
         Object.entries(filesInProgress).forEach(([path, info]) => {
-            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${path}"]`);
+            // Seleciona o arquivo em qualquer lugar da UI (Bloco 1 e Bloco 2)
+            const fileEls = document.querySelectorAll(`[data-filepath="${path}"]`);
             fileEls.forEach(el => {
                 if (info.status === 'paused') {
                     el.classList.add('status-paused');
@@ -290,19 +301,26 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             });
         });
-        completedFiles.forEach(f => {
-            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${f.source_path}"]`);
-            fileEls.forEach(el => el.classList.add('status-completed'));
+        // Aplica status de "concluído" na fila (Bloco 1)
+        completedOrSkippedPaths.forEach(path => {
+            const fileEls = fileTreeContainer.querySelectorAll(`[data-filepath="${path}"]`);
+            fileEls.forEach(el => {
+                el.classList.add('status-completed');
+                if (!el.querySelector('.fa-check-circle')) {
+                    const checkmark = document.createElement('i');
+                    checkmark.className = 'fas fa-check-circle text-green-600 ml-1';
+                    el.appendChild(checkmark);
+                }
+            });
         });
-
-        // Aplica status em pastas
+        // lógica para status de pastas (já corrigida anteriormente)
         fileTreeContainer.querySelectorAll('div[data-source-path]').forEach(groupContainer => {
             const sourcePath = groupContainer.dataset.sourcePath;
             if (sourcePath === 'avulsos') return;
             const filesInGroup = fileQueue.filter(f => f.source === sourcePath).map(f => f.path);
             if (filesInGroup.length === 0) return;
             const inProgressPaths = Object.keys(filesInProgress);
-            const completedPaths = completedFiles.map(f => f.source_path);
+            const completedPaths = completedOrSkippedPaths.map(f => f.replace(/\\/g, '/'));
             const isAnyPaused = filesInGroup.some(fp => filesInProgress[fp] && filesInProgress[fp].status === 'paused');
             const isAnyInProgress = filesInGroup.some(fp => inProgressPaths.includes(fp) && filesInProgress[fp].status === 'running');
             const areAllCompleted = filesInGroup.every(fp => completedPaths.includes(fp));
@@ -414,7 +432,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                         progressTextGeneral.textContent = `Processo interrompido. ${data.files_processed}/${data.total_files} concluídos.`;
                     }
                 }
-                updateStatusStyles(data.files_in_progress, data.completed_files);
+                updateFolderSpinners(data.files_in_progress);
+                updateStatusStyles(data.files_in_progress, allCompletedOrSkippedPaths);
             });
     }
 
