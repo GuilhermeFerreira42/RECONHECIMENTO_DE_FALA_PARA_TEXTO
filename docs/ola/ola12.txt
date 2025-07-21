@@ -1,0 +1,162 @@
+Preciso de duas coisas a primeira delas aqui o sistema crie a pasta em que ele está processando por exemplo o seu adicionar uma pasta para ser processada a pasta de nome a e depois adicione a pasta de nome B e depois adicionei a pasta de nome c e cada pasta a pasta a b e c tem subpastas e eu cambiei a pasta de saída ser a área de trabalho então o sistema deve criar a pasta a com seus arquivos respectivos a pasta B com seus arquivos respectivos e pastas assim por diante e a mesma coisa para passar a c atualmente o sistema não está fazendo isso assim quando eu colocar uma pasta de DVD por exemplo o sistema vai pegar todos os arquivos que tem um DVD criar sub pasta se eu estiver marcado junto com os arquivos que vai ser processada a criação da pasta com o nome da pasta é obrigatório Independente se o parâmetro manter a estrutura marcado ou não
+
+A segunda coisa que nós precisamos aqui o sistema coloque ou Spinner para toda sobre pastas atualmente o sistema só coloca o Spinner para pasta que está sendo processada mas deveria colocar para todas as pastas e sobre pastas em que o arquivo tem entre o arquivo está sendo processado no bloco que é a fila de processamento
+
+----
+
+Com certeza\! Entendi perfeitamente as duas necessidades. A primeira é uma mudança crucial na lógica de como os arquivos são salvos no destino, e a segunda é um refinamento visual importante para o feedback de progresso.
+
+Preparei as alterações necessárias em `app/transcriber.py` para a primeira solicitação e em `app/static/js/main.js` para a segunda.
+
+-----
+
+### **1. Criação Obrigatória de Pasta Raiz no Destino**
+
+Para garantir que cada pasta de origem adicionada crie sua própria pasta correspondente no destino (independente da opção "Manter estrutura"), modificaremos a lógica de construção do caminho de saída no back-end.
+
+**Arquivo a ser modificado:** `app/transcriber.py`
+
+**Ação:** Substitua completamente o método `_transcribe_single_file` pela versão corrigida abaixo. Ela agora trata arquivos individuais de forma diferente dos arquivos que vêm de uma pasta e garante a criação da pasta raiz para estes últimos.
+
+```python
+    # EM: app/transcriber.py
+
+    def _transcribe_single_file(self, file_info):
+        if self.stop_requested.is_set(): return None
+        
+        # Extrai as informações do objeto
+        file_path_str = file_info['path']
+        # [cite_start].get() lida com arquivos avulsos onde 'source' é nulo [cite: 306]
+        source_path_str = file_info.get('source') 
+        
+        file_path = Path(file_path_str)
+        start_time = time.time()
+        
+        if file_path_str not in self.pause_events:
+            self.pause_events[file_path_str] = threading.Event()
+            self.pause_events[file_path_str].set()
+            
+        with self.files_in_progress_lock:
+            self.files_in_progress[file_path_str] = {
+                "filename": file_path.name, "progress": 0, "status": "running",
+                "elapsed_str": "00:00", "eta_str": "--:--"
+            [cite_start]} [cite: 307]
+
+        self.pause_event.wait()
+        self._wait_file_pause(file_path_str)
+        if self.stop_requested.is_set(): return None
+
+        # --- LÓGICA DE SAÍDA ATUALIZADA ---
+
+        # Caso 1: Arquivos avulsos (sem pasta de origem) são salvos diretamente na raiz do destino.
+        if not source_path_str:
+            output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
+        else:
+            # Caso 2: Arquivos de uma pasta de origem SEMPRE terão uma pasta raiz no destino.
+            source_path = Path(source_path_str)
+            # Cria a pasta raiz no destino com o nome da pasta de origem. Ex: D:/Textos/NomeDaPastaDeOrigem
+            output_root_folder = self.dest_path / source_path.name
+
+            if self.keep_structure:
+                # Se "Manter estrutura" estiver marcado, recria a subestrutura dentro da pasta raiz.
+                try:
+                    relative_part = file_path.relative_to(source_path)
+                    output_txt_path = output_root_folder / relative_part.with_suffix('.txt')
+                except ValueError:
+                    # Fallback para segurança, caso o arquivo não esteja dentro da pasta de origem
+                    output_txt_path = output_root_folder / file_path.with_suffix('.txt').name
+            else:
+                # Se "Manter estrutura" não estiver marcado, salva o arquivo diretamente na pasta raiz criada.
+                output_txt_path = output_root_folder / file_path.with_suffix('.txt').name
+        
+        # Esta linha garante que toda a estrutura de pastas necessária seja criada
+        output_txt_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        [cite_start]temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav" [cite: 310]
+
+        try:
+            if not convert_to_wav(str(file_path), str(temp_wav_file)):
+                raise Exception("Falha na conversão")
+
+            self.pause_event.wait()
+            self._wait_file_pause(file_path_str)
+            if self.stop_requested.is_set(): return None
+
+            transcript_text = None
+            if self.model_name.startswith('whisper'):
+                transcript_text = self._transcribe_with_whisper(temp_wav_file, file_path_str, start_time)
+            else: # Vosk
+                transcript_text = self._transcribe_with_vosk(temp_wav_file, file_path_str, start_time)
+            
+            if self.stop_requested.is_set(): return None
+
+            if transcript_text:
+                with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
+                with self.completed_files_lock:
+                    [cite_start]self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)}) [cite: 312, 313]
+                return file_path_str
+            else:
+                raise Exception("Transcrição vazia")
+        except Exception as e:
+            print(f"[ERRO] Falha em {file_path.name}: {e}")
+            return None
+        finally:
+            if os.path.exists(temp_wav_file):
+                try: os.remove(temp_wav_file)
+                except OSError: pass
+            with self.files_in_progress_lock:
+                if file_path_str in self.files_in_progress:
+                    del self.files_in_progress[file_path_str]
+            if file_path_str in self.pause_events:
+                del self.pause_events[file_path_str]
+
+```
+
+### **2. Spinner de Progresso em Todas as Subpastas**
+
+Para exibir o spinner em todas as pastas e subpastas que contêm um arquivo em processamento, precisamos de uma lógica mais inteligente no front-end que navegue pela árvore de arquivos.
+
+**Arquivo a ser modificado:** `app/static/js/main.js`
+
+**Ação:** Substitua a função `updateFolderSpinners` existente pela versão abaixo. Esta nova versão percorre a árvore de forma recursiva para cima a partir de cada arquivo em progresso.
+
+```javascript
+// EM: app/static/js/main.js
+
+// Substitua a função updateFolderSpinners inteira pela versão abaixo.
+function updateFolderSpinners(filesInProgress) {
+    // 1. Limpa todos os spinners anteriores para começar do zero a cada atualização.
+    //    Usamos uma classe dedicada para facilitar a seleção e remoção.
+    fileTreeContainer.querySelectorAll('.folder-spinner').forEach(spinner => spinner.remove());
+
+    // 2. Obtém a lista de arquivos que estão atualmente em progresso.
+    const inProgressPaths = new Set(Object.keys(filesInProgress));
+
+    // 3. Itera sobre cada arquivo que está sendo processado.
+    inProgressPaths.forEach(path => {
+        // Encontra o elemento do arquivo (<li>) na árvore de processamento.
+        const fileElement = fileTreeContainer.querySelector(`li.file-item[data-filepath="${path}"]`);
+
+        if (fileElement) {
+            // 4. Começa a "subir" na árvore do DOM a partir do elemento do arquivo.
+            let parentElement = fileElement.parentElement;
+
+            while (parentElement && parentElement !== fileTreeContainer) {
+                // 5. Se o elemento pai for um <details> (que representa uma pasta)...
+                if (parentElement.tagName === 'DETAILS' && parentElement.classList.contains('folder-item')) {
+                    const summary = parentElement.querySelector('summary');
+                    
+                    // 6. ...e se essa pasta ainda não tiver um spinner, adiciona um.
+                    if (summary && !summary.querySelector('.folder-spinner')) {
+                        const spinner = document.createElement('i');
+                        spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2 folder-spinner';
+                        summary.appendChild(spinner);
+                    }
+                }
+                // Continua subindo para o próximo pai.
+                parentElement = parentElement.parentElement;
+            }
+        }
+    });
+}
+```

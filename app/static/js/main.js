@@ -247,30 +247,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Função para restaurar o spinner de progresso nas pastas
+    // Substitua a função updateFolderSpinners inteira pela versão abaixo.
     function updateFolderSpinners(filesInProgress) {
-        // Remove todos os spinners antigos para evitar duplicatas
-        fileTreeContainer.querySelectorAll('summary .fa-spin').forEach(spinner => spinner.remove());
+        // 1. Limpa todos os spinners anteriores para começar do zero a cada atualização.
+        //    Usamos uma classe dedicada para facilitar a seleção e remoção.
+        fileTreeContainer.querySelectorAll('.folder-spinner').forEach(spinner => spinner.remove());
 
+        // 2. Obtém a lista de arquivos que estão atualmente em progresso.
         const inProgressPaths = new Set(Object.keys(filesInProgress));
-        if (inProgressPaths.size === 0) return;
 
-        // Itera sobre cada grupo de pasta na fila de processamento
-        fileTreeContainer.querySelectorAll('div[data-source-path]').forEach(groupContainer => {
-            const sourcePath = groupContainer.dataset.sourcePath;
-            if (sourcePath === 'avulsos') return; // Ignora arquivos avulsos
+        // 3. Itera sobre cada arquivo que está sendo processado.
+        inProgressPaths.forEach(path => {
+            // Encontra o elemento do arquivo (<li>) na árvore de processamento.
+            const fileElement = fileTreeContainer.querySelector(`li.file-item[data-filepath="${path}"]`);
 
-            // Verifica se algum arquivo nesse grupo está em progresso
-            const hasActiveFile = fileQueue.some(file =>
-                file.source === sourcePath && inProgressPaths.has(file.path)
-            );
+            if (fileElement) {
+                // 4. Começa a "subir" na árvore do DOM a partir do elemento do arquivo.
+                let parentElement = fileElement.parentElement;
 
-            if (hasActiveFile) {
-                const summary = groupContainer.querySelector('h3'); // O header da pasta
-                if (summary && !summary.querySelector('.fa-spin')) {
-                    const spinner = document.createElement('i');
-                    spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2';
-                    summary.appendChild(spinner);
+                while (parentElement && parentElement !== fileTreeContainer) {
+                    // 5. Se o elemento pai for um <details> (que representa uma pasta)...
+                    if (parentElement.tagName === 'DETAILS' && parentElement.classList.contains('folder-item')) {
+                        const summary = parentElement.querySelector('summary');
+                        
+                        // 6. ...e se essa pasta ainda não tiver um spinner, adiciona um.
+                        if (summary && !summary.querySelector('.folder-spinner')) {
+                            const spinner = document.createElement('i');
+                            spinner.className = 'fas fa-cog fa-spin text-blue-500 ml-2 folder-spinner';
+                            summary.appendChild(spinner);
+                        }
+                    }
+                    // Continua subindo para o próximo pai.
+                    parentElement = parentElement.parentElement;
                 }
             }
         });

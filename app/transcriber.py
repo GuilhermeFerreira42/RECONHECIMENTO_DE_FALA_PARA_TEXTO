@@ -203,7 +203,7 @@ class TranscriptionManager:
         
         # Extrai as informações do objeto
         file_path_str = file_info['path']
-        source_path_str = file_info.get('source') # .get() para lidar com arquivos avulsos (source: null)
+        source_path_str = file_info.get('source') 
         
         file_path = Path(file_path_str)
         start_time = time.time()
@@ -211,6 +211,7 @@ class TranscriptionManager:
         if file_path_str not in self.pause_events:
             self.pause_events[file_path_str] = threading.Event()
             self.pause_events[file_path_str].set()
+            
         with self.files_in_progress_lock:
             self.files_in_progress[file_path_str] = {
                 "filename": file_path.name, "progress": 0, "status": "running",
@@ -221,19 +222,28 @@ class TranscriptionManager:
         self._wait_file_pause(file_path_str)
         if self.stop_requested.is_set(): return None
 
-        # ATUALIZADO: Lógica de criação do caminho de saída para múltiplas origens
-        if self.keep_structure and source_path_str:
-            source_path = Path(source_path_str)
-            # Garante que o arquivo pertence à sua pasta de origem antes de calcular o caminho relativo
-            try:
-                relative_part = file_path.relative_to(source_path)
-                output_txt_path = self.dest_path / relative_part.with_suffix('.txt')
-            except ValueError:
-                output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
-        else:
-            # Para arquivos avulsos ou se a estrutura não for mantida
+        # --- LÓGICA DE SAÍDA ATUALIZADA ---
+        # Caso 1: Arquivos avulsos (sem pasta de origem) são salvos diretamente na raiz do destino.
+        if not source_path_str:
             output_txt_path = self.dest_path / file_path.with_suffix('.txt').name
-        
+        else:
+            # Caso 2: Arquivos de uma pasta de origem SEMPRE terão uma pasta raiz no destino.
+            source_path = Path(source_path_str)
+            # Cria a pasta raiz no destino com o nome da pasta de origem. Ex: D:/Textos/NomeDaPastaDeOrigem
+            output_root_folder = self.dest_path / source_path.name
+
+            if self.keep_structure:
+                # Se "Manter estrutura" estiver marcado, recria a subestrutura dentro da pasta raiz.
+                try:
+                    relative_part = file_path.relative_to(source_path)
+                    output_txt_path = output_root_folder / relative_part.with_suffix('.txt')
+                except ValueError:
+                    # Fallback para segurança, caso o arquivo não esteja dentro da pasta de origem
+                    output_txt_path = output_root_folder / file_path.with_suffix('.txt').name
+            else:
+                # Se "Manter estrutura" não estiver marcado, salva o arquivo diretamente na pasta raiz criada.
+                output_txt_path = output_root_folder / file_path.with_suffix('.txt').name
+        # Esta linha garante que toda a estrutura de pastas necessária seja criada
         output_txt_path.parent.mkdir(parents=True, exist_ok=True)
         
         temp_wav_file = self.dest_path / f"temp_{os.getpid()}_{threading.get_ident()}.wav"
@@ -257,7 +267,6 @@ class TranscriptionManager:
             if transcript_text:
                 with open(output_txt_path, 'w', encoding='utf-8') as f: f.write(transcript_text)
                 with self.completed_files_lock:
-                    # O source_path retornado é o caminho do arquivo original, como esperado pelo frontend
                     self.newly_completed_files.append({"source_path": file_path_str, "output_path": str(output_txt_path)})
                 return file_path_str
             else:
